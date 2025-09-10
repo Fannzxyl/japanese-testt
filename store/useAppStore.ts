@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, Settings, ChatMessage } from '../types';
+import { User, Settings, ChatMessage, TestConfig } from '../types';
 
 interface AppState {
   theme: 'light' | 'dark';
@@ -17,6 +17,7 @@ interface AppState {
   openAiSensei: () => void;
   closeAiSensei: () => void;
   setSettings: (settings: Partial<Settings>) => void;
+  setLastTestConfig: (config: TestConfig) => void;
   addAiMessage: (message: ChatMessage) => void;
   setAiLoading: (isLoading: boolean) => void;
   clearAiChat: () => void;
@@ -32,37 +33,68 @@ const mockUser: User = {
 
 const initialAiMessage: ChatMessage = {
     role: 'model',
-    text: "こんにちは！ I'm SenseiBot. How can I help you with your JFT A2 studies today? You can ask me to explain a concept, or try one of the suggestions below."
+    text: "こんにちは、みんなさん！ Saya AI Sensei, partner belajarmu yang paling bersemangat! 🔥 Siap untuk menaklukkan JFT A2 bersama? Tanya apa saja tentang kana, kosakata, atau minta Sensei buatkan kuis! Ayo mulai!"
 };
 
-export const useAppStore = create<AppState>((set) => ({
-  theme: 'light',
-  isSidebarCollapsed: false,
-  isSearchModalOpen: false,
-  isAiSenseiOpen: false,
-  user: mockUser,
-  settings: {
+const loadSettings = (): Settings => {
+  try {
+    const savedSettings = localStorage.getItem('nihongolab_settings');
+    if (savedSettings) {
+      return JSON.parse(savedSettings);
+    }
+  } catch (error) {
+    console.error("Failed to load settings from localStorage", error);
+  }
+  return {
     theme: 'light',
     language: 'en',
     audioAutoplay: true,
     showScrollbars: false,
     searchHistoryEnabled: false,
     aiChatHistoryEnabled: false,
-  },
+  };
+};
+
+const saveSettings = (settings: Settings) => {
+  try {
+    localStorage.setItem('nihongolab_settings', JSON.stringify(settings));
+  } catch (error) {
+    console.error("Failed to save settings to localStorage", error);
+  }
+};
+
+
+export const useAppStore = create<AppState>((set) => ({
+  theme: loadSettings().theme,
+  isSidebarCollapsed: false,
+  isSearchModalOpen: false,
+  isAiSenseiOpen: false,
+  user: mockUser,
+  settings: loadSettings(),
   aiMessages: [initialAiMessage],
   isAiLoading: false,
   toggleTheme: () => set((state) => {
     const newTheme = state.theme === 'light' ? 'dark' : 'light';
-    return { theme: newTheme, settings: {...state.settings, theme: newTheme} };
+    // FIX: Explicitly type newSettings to conform to the Settings interface, resolving type inference issues.
+    const newSettings: Settings = { ...state.settings, theme: newTheme };
+    saveSettings(newSettings);
+    return { theme: newTheme, settings: newSettings };
   }),
   toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
   openSearchModal: () => set({ isSearchModalOpen: true }),
   closeSearchModal: () => set({ isSearchModalOpen: false }),
   openAiSensei: () => set({ isAiSenseiOpen: true }),
   closeAiSensei: () => set({ isAiSenseiOpen: false }),
-  setSettings: (newSettings) => set((state) => ({
-    settings: { ...state.settings, ...newSettings }
-  })),
+  setSettings: (newSettings) => set((state) => {
+    const updatedSettings = { ...state.settings, ...newSettings };
+    saveSettings(updatedSettings);
+    return { settings: updatedSettings };
+  }),
+  setLastTestConfig: (config) => set((state) => {
+    const newSettings = { ...state.settings, lastTestConfig: config };
+    saveSettings(newSettings);
+    return { settings: newSettings };
+  }),
   addAiMessage: (message) => set((state) => ({
       aiMessages: state.settings.aiChatHistoryEnabled ? [...state.aiMessages, message] : [initialAiMessage, message]
   })),

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { hiragana, katakana } from '../constants';
 import { Kana } from '../types';
-import { X } from 'lucide-react';
 
 const KanaCard: React.FC<{ kana: Kana; isFlipped: boolean; onClick: () => void }> = ({ kana, isFlipped, onClick }) => {
     return (
@@ -36,100 +36,10 @@ const KanaGrid: React.FC<{ kanaList: Kana[] }> = ({ kanaList }) => {
     );
 };
 
-// Drill Modal Component (defined in the same file)
-const DrillModal: React.FC<{ drillChars: Kana[]; onClose: () => void }> = ({ drillChars, onClose }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [inputValue, setInputValue] = useState('');
-    const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-    const [showSummary, setShowSummary] = useState(false);
-    const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const currentKana = drillChars[currentIndex];
-
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, [currentIndex]);
-    
-    const handleNext = () => {
-        setIsCorrect(null);
-        setInputValue('');
-        if (currentIndex < drillChars.length - 1) {
-            setCurrentIndex(prev => prev + 1);
-        } else {
-            setShowSummary(true);
-        }
-    }
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (isCorrect !== null) { // If answer is already submitted, just go to next
-            handleNext();
-            return;
-        }
-        
-        const correct = inputValue.trim().toLowerCase() === currentKana.romaji;
-        setIsCorrect(correct);
-        setStats(prev => correct ? { ...prev, correct: prev.correct + 1 } : { ...prev, incorrect: prev.incorrect + 1 });
-    }
-    
-    if (showSummary) {
-        return (
-             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-8 text-center">
-                    <h2 className="text-2xl font-bold mb-4">Drill Complete!</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6">Here's your score:</p>
-                    <div className="space-y-3">
-                        <p className="text-lg font-medium">Correct: <span className="font-bold text-green-500">{stats.correct}</span></p>
-                        <p className="text-lg font-medium">Incorrect: <span className="font-bold text-red-500">{stats.incorrect}</span></p>
-                        <p className="text-xl font-bold mt-4">Accuracy: {drillChars.length > 0 ? Math.round((stats.correct / drillChars.length) * 100) : 0}%</p>
-                    </div>
-                    <button onClick={onClose} className="mt-8 w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700">Close</button>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 relative">
-                <button onClick={onClose} className="absolute top-4 right-4 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"><X/></button>
-                <div className="text-center">
-                    <p className="text-sm text-slate-500">{currentIndex + 1} / {drillChars.length}</p>
-                    <div className="my-8 flex items-center justify-center">
-                         <p className="text-8xl font-bold">{currentKana.char}</p>
-                    </div>
-                    <form onSubmit={handleSubmit}>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Type the romaji"
-                            readOnly={isCorrect !== null}
-                            className={`w-full text-center text-xl p-4 rounded-lg bg-white dark:bg-slate-800 border-2 focus:outline-none focus:ring-2 focus:ring-blue-500
-                                ${isCorrect === true ? 'border-green-500' : ''}
-                                ${isCorrect === false ? 'border-red-500' : 'border-slate-300 dark:border-slate-600'}
-                            `}
-                        />
-                        {isCorrect === false && <p className="text-red-500 mt-2">Correct answer: {currentKana.romaji}</p>}
-                        <button type="submit" className={`w-full mt-4 font-bold py-3 rounded-lg text-white transition-colors
-                            ${isCorrect !== null ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                        >
-                            {isCorrect !== null ? 'Next' : 'Check'}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
 const KanaTrainer: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'hiragana' | 'katakana'>('hiragana');
     const [customDrillChars, setCustomDrillChars] = useState<string[]>([]);
-    const [isDrillModalOpen, setIsDrillModalOpen] = useState(false);
+    const navigate = useNavigate();
 
     const currentKanaList = activeTab === 'hiragana' ? hiragana : katakana;
 
@@ -165,8 +75,19 @@ const KanaTrainer: React.FC = () => {
         if (groupType === 'Yōon') chars = currentKanaList.filter(k => k.group.includes('Yōon')).map(k => k.char);
         setCustomDrillChars(chars);
     };
-
-    const drillKana = currentKanaList.filter(k => customDrillChars.includes(k.char));
+    
+    const handleStartDrill = () => {
+        const drillConfig = {
+            domain: 'kana',
+            script: activeTab,
+            selection: {
+                kind: 'list',
+                value: customDrillChars,
+            },
+            count: customDrillChars.length,
+        };
+        navigate('/test', { state: { prefillConfig: drillConfig } });
+    };
 
     return (
         <div className="space-y-8">
@@ -194,7 +115,7 @@ const KanaTrainer: React.FC = () => {
                         </button>
                     ))}
                  </div>
-                 <button onClick={() => setIsDrillModalOpen(true)} disabled={customDrillChars.length < 5} className="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:bg-green-700 transition-all disabled:bg-slate-400 disabled:cursor-not-allowed">
+                 <button onClick={handleStartDrill} disabled={customDrillChars.length < 5} className="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg shadow-md hover:bg-green-700 transition-all disabled:bg-slate-400 disabled:cursor-not-allowed">
                      Start Drill ({customDrillChars.length})
                  </button>
             </div>
@@ -225,7 +146,6 @@ const KanaTrainer: React.FC = () => {
                     </div>
                 ))}
             </div>
-            {isDrillModalOpen && <DrillModal drillChars={drillKana} onClose={() => setIsDrillModalOpen(false)} />}
         </div>
     );
 };

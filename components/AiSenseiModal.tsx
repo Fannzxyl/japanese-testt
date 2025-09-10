@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleGenAI } from '@google/genai';
 import { useAppStore } from '../store/useAppStore';
 import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
+import { hiragana, katakana, vocabulary, kanjiList } from '../constants';
+
+// Per user request, an API key was provided to be used directly.
+const API_KEY = 'AIzaSyCZVyGLZrlJW-bQFSYfIgVgWhVWQ6icaeE';
+// To align with SDK examples, we'll place it in a mock process.env object.
+const process = { env: { API_KEY } };
+
 
 const AiSenseiModal: React.FC = () => {
     const { 
         closeAiSensei,
         settings,
-        setSettings,
         aiMessages,
         isAiLoading,
         addAiMessage,
@@ -18,9 +25,9 @@ const AiSenseiModal: React.FC = () => {
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     const quickActions = [
-        "Buat 5 soal transportasi",
-        "Jelaskan partikel は vs が",
-        "Rencana belajar 10 menit"
+        "Apa artinya わたし?",
+        "Buat 5 soal tentang makanan",
+        "Jelaskan perbedaan は dan が"
     ];
 
     // Close on escape key
@@ -47,24 +54,47 @@ const AiSenseiModal: React.FC = () => {
         addAiMessage({ role: 'user', text: query });
         setAiLoading(true);
 
-        // Mock Gemini API call
-        setTimeout(() => {
-            let responseText = "Maaf, saya tidak mengerti pertanyaan itu. Coba tanyakan tentang Hiragana, Katakana, atau kosakata JFT A2.";
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+            const systemInstruction = `You are AI Sensei, a cheerful, energetic, and incredibly supportive Japanese teacher for beginners studying for the JFT A2 exam.
+            Your personality is super enthusiastic! Use Japanese phrases like 「こんにちは！」, 「頑張って！」(Ganbatte!), 「すごい！」(Sugoi!), and 🔥 emojis.
+            Keep your answers concise, friendly, and focused on the JFT A2 level.
+            You have access to the app's learning materials in JSON format below. Use this data to answer questions about vocabulary, kana, or kanji.
+            If a question is outside the scope of this data or basic Japanese grammar, politely explain that it's beyond the JFT A2 level you're teaching, and guide the user back to relevant topics.
+            When asked to create a quiz, use the provided vocabulary data.`;
             
-            const lowerQuery = query.toLowerCase();
-            if (lowerQuery.includes("soal transportasi")) {
-                responseText = "Tentu! Ini 5 soal pilihan ganda tentang transportasi:\n\n1. 「えき」は 英語で 何ですか。\nA) School\nB) Station\nC) Airport\n\n2. 「くるま」の 漢字は どれですか。\nA) 車\nB) 電\nC) 道\n\n3. I go to school by bus. -> 日本語で...\nA) わたしはバスでがっこうにいきます。\nB) わたしはくるまでがっこうにいきます。\n\n4. Shinkansen is a... \nA) Bicycle \nB) Car \nC) Bullet Train \n\n5. 「ひこうき」は 何ですか。\nA) Airplane \nB) Ship \nC) Bicycle";
-            } else if (lowerQuery.includes("は vs が")) {
-                responseText = "Tentu! Partikel 「は」 (wa) digunakan untuk menandai **topik** kalimat—apa yang sedang dibicarakan. Partikel 「が」 (ga) digunakan untuk menandai **subjek** dari sebuah aksi atau deskripsi, seringkali untuk memberikan informasi baru.\n\nContoh:\n- わたし **は** がくせいです。(Topiknya adalah 'saya', dan saya jelaskan bahwa saya seorang siswa.)\n- あそこに ねこ **が** います。(Informasi barunya adalah 'kucing' yang ada di sana.)";
-            } else if (lowerQuery.includes("rencana belajar")) {
-                responseText = "Baik! Ini rencana belajar 10 menit untukmu:\n\n- **3 menit:** Ulas 10 kartu Hiragana yang paling sering kamu salah.\n- **5 menit:** Pelajari 5 kosakata baru dari topik 'Belanja'.\n- **2 menit:** Coba kuis singkat tentang 5 kosakata tersebut.";
-            } else if (lowerQuery.includes("konnichiwa")) {
-                responseText = "こんにちは！"
-            }
-            
+            // Provide the model with a sample of the app's data as context for more accurate answers.
+            const dataContext = `
+            Here is a sample of the learning data available in the app:
+            Vocabulary: ${JSON.stringify(vocabulary.slice(0, 15))}
+            Hiragana: ${JSON.stringify(hiragana.slice(0, 15))}
+            Katakana: ${JSON.stringify(katakana.slice(0, 15))}
+            Kanji: ${JSON.stringify(kanjiList.slice(0, 10))}
+            `;
+
+            const contents = [
+                ...aiMessages.slice(1).map(m => ({ role: m.role, parts: [{ text: m.text }] })), // Exclude initial message
+                { role: 'user', parts: [{ text: query }] }
+            ];
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: contents,
+                config: {
+                    systemInstruction: `${systemInstruction}\n\n${dataContext}`,
+                },
+            });
+
+            const responseText = response.text;
             addAiMessage({ role: 'model', text: responseText });
+
+        } catch (error) {
+            console.error("Gemini API call failed:", error);
+            addAiMessage({ role: 'model', text: "すみません！Sensei is having a little trouble connecting right now. Please try again in a moment. ごめんね！" });
+        } finally {
             setAiLoading(false);
-        }, 1500); // Simulate network delay
+        }
     };
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -122,7 +152,7 @@ const AiSenseiModal: React.FC = () => {
                     <form onSubmit={handleSubmit} className="flex items-center gap-3">
                         <input
                             type="text"
-                            placeholder="Ask Sensei a question..."
+                            placeholder="Tanya Sensei di sini..."
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
                             className="w-full bg-slate-100 dark:bg-slate-700/80 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -132,9 +162,9 @@ const AiSenseiModal: React.FC = () => {
                         </button>
                     </form>
                     <div className="text-xs text-center text-slate-400 mt-3 flex items-center justify-center gap-4">
-                        <p>Chat history is {settings.aiChatHistoryEnabled ? 'ON' : 'OFF'}.</p>
+                        <p>Riwayat chat {settings.aiChatHistoryEnabled ? 'ON' : 'OFF'}.</p>
                         {settings.aiChatHistoryEnabled && aiMessages.length > 1 && (
-                            <button onClick={clearAiChat} className="flex items-center gap-1 hover:text-slate-500"><Trash2 className="h-3 w-3"/> Clear Chat</button>
+                            <button onClick={clearAiChat} className="flex items-center gap-1 hover:text-slate-500"><Trash2 className="h-3 w-3"/> Bersihkan Chat</button>
                         )}
                     </div>
                 </div>

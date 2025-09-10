@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { Home, BookOpen, BrainCircuit, Shield, Star, Settings, ChevronLeft, ChevronRight, User as UserIcon, Sparkles } from 'lucide-react';
+import { Home, BookOpen, BrainCircuit, Shield, Star, Settings, ChevronLeft, ChevronRight, User as UserIcon, Sparkles, Edit } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
     const { isSidebarCollapsed, toggleSidebar, user, openAiSensei } = useAppStore();
@@ -11,7 +11,8 @@ const Sidebar: React.FC = () => {
         { to: '/kana', icon: BookOpen, label: 'Kana Trainer' },
         { to: '/vocabulary', icon: BrainCircuit, label: 'Vocabulary' },
         { to: '/kanji', icon: Shield, label: 'Kanji' },
-        { to: '/challenge', icon: Star, label: 'Challenge' },
+        { to: '/test', icon: Star, label: 'Test Suite' },
+        { to: '/writing', icon: Edit, label: 'Writing Practice' },
     ];
     
     const actionItems = [

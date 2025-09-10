@@ -16,12 +16,12 @@ const Challenge: React.FC = () => {
     const [incorrect, setIncorrect] = useState(0);
     const [currentQuestion, setCurrentQuestion] = useState<Kana | null>(null);
 
-    // FIX: Changed NodeJS.Timeout to number, as setTimeout in the browser returns a number.
     const timerRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (isActive && timeLeft > 0) {
-            timerRef.current = setTimeout(() => {
+            // FIX: Use window.setTimeout to ensure the browser's implementation is used, which returns a number.
+            timerRef.current = window.setTimeout(() => {
                 setTimeLeft(timeLeft - 1);
             }, 1000);
         } else if (timeLeft === 0 && isActive) {

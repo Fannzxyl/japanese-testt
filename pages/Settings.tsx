@@ -1,16 +1,12 @@
 import React from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { Settings as SettingsType, User } from '../types';
+import { Settings as SettingsType } from '../types';
 
 const Settings: React.FC = () => {
-    const { settings, setSettings, theme, toggleTheme, user } = useAppStore();
+    const { settings, setSettings, user } = useAppStore();
 
     const handleSettingChange = <K extends keyof SettingsType,>(key: K, value: SettingsType[K]) => {
-        if (key === 'theme') {
-            toggleTheme();
-        } else {
-            setSettings({ [key]: value });
-        }
+        setSettings({ [key]: value });
     };
     
     const handleResetProgress = () => {
@@ -71,8 +67,8 @@ const Settings: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-md">
                 <SettingRow title="Theme" description="Choose between light and dark comfort mode.">
                     <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-full">
-                        <button onClick={() => handleSettingChange('theme', 'light')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${theme === 'light' ? 'bg-white shadow' : ''}`}>Light</button>
-                        <button onClick={() => handleSettingChange('theme', 'dark')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${theme === 'dark' ? 'bg-slate-800 shadow text-white' : ''}`}>Dark</button>
+                        <button onClick={() => handleSettingChange('theme', 'light')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'light' ? 'bg-white shadow' : ''}`}>Light</button>
+                        <button onClick={() => handleSettingChange('theme', 'dark')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'dark' ? 'bg-slate-800 shadow text-white' : ''}`}>Dark</button>
                     </div>
                 </SettingRow>
 

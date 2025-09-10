@@ -7,7 +7,8 @@ import Dashboard from './pages/Dashboard';
 import KanaTrainer from './pages/KanaTrainer';
 import Vocabulary from './pages/Vocabulary';
 import Kanji from './pages/Kanji';
-import Challenge from './pages/Challenge';
+import Test from './pages/Test';
+import WritingPractice from './pages/WritingPractice';
 import Settings from './pages/Settings';
 import SearchModal from './components/SearchModal';
 import AiSenseiModal from './components/AiSenseiModal';
@@ -28,15 +29,15 @@ const PageLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
-    const { theme, isSearchModalOpen, isAiSenseiOpen } = useAppStore();
+    const { settings } = useAppStore();
 
     useEffect(() => {
-        if (theme === 'dark') {
+        if (settings.theme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
-    }, [theme]);
+    }, [settings.theme]);
 
     return (
         <HashRouter>
@@ -46,12 +47,13 @@ const App: React.FC = () => {
                     <Route path="kana" element={<KanaTrainer />} />
                     <Route path="vocabulary" element={<Vocabulary />} />
                     <Route path="kanji" element={<Kanji />} />
-                    <Route path="challenge" element={<Challenge />} />
+                    <Route path="test" element={<Test />} />
+                    <Route path="writing" element={<WritingPractice />} />
                     <Route path="settings" element={<Settings />} />
                 </Route>
             </Routes>
-            {isSearchModalOpen && <SearchModal />}
-            {isAiSenseiOpen && <AiSenseiModal />}
+            {useAppStore.getState().isSearchModalOpen && <SearchModal />}
+            {useAppStore.getState().isAiSenseiOpen && <AiSenseiModal />}
         </HashRouter>
     );
 };
