@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { useAppStore } from '../store/useAppStore';
 import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
 import { hiragana, katakana, vocabulary, kanjiList } from '../constants';
@@ -55,6 +54,7 @@ const AiSenseiModal: React.FC = () => {
         setAiLoading(true);
 
         try {
+            const { GoogleGenAI } = await import('@google/genai');
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
             const systemInstruction = `You are AI Sensei, a cheerful, energetic, and incredibly supportive Japanese teacher for beginners studying for the JFT A2 exam.
