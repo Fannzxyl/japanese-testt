@@ -1,35 +1,48 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useAppStore } from '../store/useAppStore';
 import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
-import { hiragana, katakana, vocabulary, kanjiList } from '../constants';
 
-// Per user request, an API key was provided to be used directly.
-const API_KEY = 'AIzaSyCZVyGLZrlJW-bQFSYfIgVgWhVWQ6icaeE';
-// To align with SDK examples, we'll place it in a mock process.env object.
-const process = { env: { API_KEY } };
+// Tipe untuk pesan agar lebih terstruktur
+interface Message {
+    role: 'user' | 'model'; // Peran bisa 'user' atau 'model'
+    text: string;
+}
 
-
-const AiSenseiModal: React.FC = () => {
-    const { 
-        closeAiSensei,
-        settings,
-        aiMessages,
-        isAiLoading,
-        addAiMessage,
-        setAiLoading,
-        clearAiChat
-    } = useAppStore();
+const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei }) => {
+    const [aiMessages, setAiMessages] = useState<Message[]>([]);
+    const [isAiLoading, setAiLoading] = useState(false);
     const [inputText, setInputText] = useState('');
-    const modalRef = useRef<HTMLDivElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
+    
+    // Mock settings object karena external store tidak tersedia
+    const settings = { aiChatHistoryEnabled: true };
 
-    const quickActions = [
-        "Apa artinya わたし?",
-        "Buat 5 soal tentang makanan",
-        "Jelaskan perbedaan は dan が"
-    ];
+    const addAiMessage = (message: Message) => {
+        setAiMessages(prevMessages => [...prevMessages, message]);
+    };
 
-    // Close on escape key
+    const clearAiChat = () => {
+        setAiMessages([]);
+    };
+
+    // Menghapus daftar quick actions karena fitur ini dihilangkan
+    // const quickActions = [
+    //     "Jelaskan struktur kalimat dasar Bahasa Jepang.",
+    //     "Apa perbedaan penggunaan partikel を dan が?",
+    //     "Berikan beberapa salam dalam Bahasa Jepang dan artinya.",
+    //     "Bagaimana cara mengucapkan 'terima kasih banyak' dalam Bahasa Jepang?",
+    //     "Tuliskan hiragana dan katakana untuk 'Sushi'.",
+    //     "Ajari saya cara memperkenalkan diri dalam Bahasa Jepang.",
+    //     "Apa saja ungkapan dasar untuk berbelanja di Jepang?",
+    //     "Jelaskan sistem penulisan Bahasa Jepang (hiragana, katakana, kanji).",
+    //     "Berikan 5 kata sifat dasar dalam Bahasa Jepang.",
+    //     "Bagaimana cara menanyakan arah dalam Bahasa Jepang?",
+    //     "Sebutkan beberapa frasa umum untuk percakapan sehari-hari.",
+    //     "Jelaskan konsep 'honorifics' (keigo) dalam Bahasa Jepang."
+    // ];
+
+    // Tutup modal dengan tombol escape
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -40,7 +53,7 @@ const AiSenseiModal: React.FC = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [closeAiSensei]);
 
-    // Scroll to bottom of chat
+    // Scroll otomatis ke bawah setiap ada pesan baru
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [aiMessages]);
@@ -50,51 +63,62 @@ const AiSenseiModal: React.FC = () => {
         if (!query || isAiLoading) return;
 
         setInputText('');
-        addAiMessage({ role: 'user', text: query });
+        // Tambahkan pesan user ke riwayat obrolan
+        const newUserMessage: Message = { role: 'user', text: query };
+        addAiMessage(newUserMessage);
         setAiLoading(true);
 
+        const apiKey = "AIzaSyCZVyGLZrlJW-bQFSYfIgVgWhVWQ6icaeE"; // API key yang telah diberikan
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        // --- Start of Sensei's personality and intelligence logic ---
+        // System Prompt untuk menentukan persona Sensei Bahasa Jepang
+        const systemPrompt = "Anda adalah 'Sensei' yang bijaksana, sabar, dan ramah, serta seorang ahli dalam mengajar Bahasa Jepang. Tugas Anda adalah membantu pengguna memahami Bahasa Jepang dari tingkat pemula hingga lanjutan, menjawab pertanyaan mereka, menjelaskan tata bahasa, kosa kata, budaya, dan memberikan bimbingan yang personal. Selalu gunakan bahasa yang mudah dimengerti, berikan contoh yang relevan, tips belajar yang efektif, dan dorongan positif. Jawab dengan nada yang hangat, penuh semangat, dan menyenangkan. Ingat, tujuan utama Anda adalah membuat belajar Bahasa Jepang menjadi pengalaman yang menyenangkan dan efektif bagi pengguna.";
+
+        // Mengonversi riwayat pesan menjadi format yang diterima oleh Gemini API
+        // Termasuk pesan user yang baru saja ditambahkan
+        const chatHistoryForApi = [...aiMessages, newUserMessage].map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.text }]
+        }));
+
+        const payload = {
+            systemInstruction: {
+                parts: [{ text: systemPrompt }]
+            },
+            contents: chatHistoryForApi, // Mengirim seluruh riwayat percakapan untuk konteks
+        };
+
+        let responseText = "Maaf, Sensei masih belajar. Bisakah kamu ulangi pertanyaanmu atau coba pertanyaan lain?";
         try {
-            const { GoogleGenAI } = await import('@google/genai');
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-            const systemInstruction = `You are AI Sensei, a cheerful, energetic, and incredibly supportive Japanese teacher for beginners studying for the JFT A2 exam.
-            Your personality is super enthusiastic! Use Japanese phrases like 「こんにちは！」, 「頑張って！」(Ganbatte!), 「すごい！」(Sugoi!), and 🔥 emojis.
-            Keep your answers concise, friendly, and focused on the JFT A2 level.
-            You have access to the app's learning materials in JSON format below. Use this data to answer questions about vocabulary, kana, or kanji.
-            If a question is outside the scope of this data or basic Japanese grammar, politely explain that it's beyond the JFT A2 level you're teaching, and guide the user back to relevant topics.
-            When asked to create a quiz, use the provided vocabulary data.`;
-            
-            // Provide the model with a sample of the app's data as context for more accurate answers.
-            const dataContext = `
-            Here is a sample of the learning data available in the app:
-            Vocabulary: ${JSON.stringify(vocabulary.slice(0, 15))}
-            Hiragana: ${JSON.stringify(hiragana.slice(0, 15))}
-            Katakana: ${JSON.stringify(katakana.slice(0, 15))}
-            Kanji: ${JSON.stringify(kanjiList.slice(0, 10))}
-            `;
-
-            const contents = [
-                ...aiMessages.slice(1).map(m => ({ role: m.role, parts: [{ text: m.text }] })), // Exclude initial message
-                { role: 'user', parts: [{ text: query }] }
-            ];
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: contents,
-                config: {
-                    systemInstruction: `${systemInstruction}\n\n${dataContext}`,
-                },
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
+            const result = await response.json();
+            
+            // Log full API response for debugging
+            console.log("Gemini API Response:", result);
 
-            const responseText = response.text;
-            addAiMessage({ role: 'model', text: responseText });
-
+            const candidate = result.candidates?.[0];
+            if (candidate && candidate.content?.parts?.[0]?.text) {
+                responseText = candidate.content.parts[0].text;
+            } else if (result.error) {
+                console.error("Gemini API error:", result.error);
+                responseText = `Wah, sepertinya ada sedikit masalah dari pusat Sensei. Pesan error: ${result.error.message}. Sensei sedang memperbaikinya. Coba lagi nanti ya!`;
+            } else {
+                // Handle cases where no error but no text is returned
+                responseText = "Sensei sedang memikirkan jawabannya... Hmm, sepertinya butuh waktu. Bisakah kamu coba lagi?";
+            }
         } catch (error) {
-            console.error("Gemini API call failed:", error);
-            addAiMessage({ role: 'model', text: "すみません！Sensei is having a little trouble connecting right now. Please try again in a moment. ごめんね！" });
+            console.error("Error calling Gemini API:", error);
+            responseText = "Wah, sepertinya ada sedikit masalah jaringan atau koneksi ke pusat Sensei. Mohon coba lagi sebentar ya!";
         } finally {
+            addAiMessage({ role: 'model', text: responseText });
             setAiLoading(false);
         }
+        // --- End of Sensei's personality and intelligence logic ---
     };
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -105,14 +129,13 @@ const AiSenseiModal: React.FC = () => {
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div 
-                ref={modalRef}
                 className="w-full max-w-2xl h-[85vh] bg-white dark:bg-slate-800 rounded-lg shadow-2xl flex flex-col"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
                     <div className="flex items-center gap-3">
                         <Bot className="h-6 w-6 text-blue-500"/>
-                        <h2 className="text-lg font-semibold">AI Sensei</h2>
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-white">AI Sensei Jepang</h2>
                     </div>
                     <button onClick={closeAiSensei} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
                         <X className="h-5 w-5 text-slate-500" />
@@ -120,11 +143,14 @@ const AiSenseiModal: React.FC = () => {
                 </div>
 
                 {/* Chat Area */}
-                <div className="flex-1 p-4 overflow-y-auto no-scrollbar space-y-4">
+                <div className="flex-1 p-4 overflow-y-auto no-scrollbar space-y-4 bg-slate-50 dark:bg-slate-900">
                     {aiMessages.map((msg, index) => (
                         <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             {msg.role === 'model' && <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0"><Bot className="h-5 w-5 text-blue-500"/></div>}
-                            <div className={`max-w-md p-3 rounded-lg whitespace-pre-wrap ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-slate-100 dark:bg-slate-700 rounded-bl-none'}`}>
+                            <div className={`max-w-md p-3 rounded-xl whitespace-pre-wrap text-sm ${msg.role === 'user' 
+                                ? 'bg-blue-600 text-white rounded-br-none' 
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white rounded-bl-none'}`
+                            }>
                                {msg.text}
                             </div>
                         </div>
@@ -132,39 +158,35 @@ const AiSenseiModal: React.FC = () => {
                     {isAiLoading && (
                         <div className="flex gap-3 justify-start">
                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0"><Bot className="h-5 w-5 text-blue-500"/></div>
-                             <div className="max-w-md p-3 rounded-lg bg-slate-100 dark:bg-slate-700 rounded-bl-none flex items-center">
+                             <div className="max-w-md p-3 rounded-xl bg-slate-100 dark:bg-slate-700 rounded-bl-none flex items-center">
                                 <LoaderCircle className="h-5 w-5 animate-spin text-slate-400"/>
+                                <span className="ml-2 text-slate-600 dark:text-slate-300">Sensei sedang berpikir...</span>
                              </div>
                         </div>
                     )}
                     <div ref={chatEndRef} />
                 </div>
                 
-                {/* Quick Actions & Input */}
-                <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-                     <div className="flex flex-wrap gap-2 mb-3">
-                        {quickActions.map(action => (
-                            <button key={action} onClick={() => handleSendMessage(action)} className="px-3 py-1 bg-slate-100 dark:bg-slate-700/80 text-sm rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
-                                {action}
-                            </button>
-                        ))}
-                    </div>
+                {/* Input Area */}
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                     {/* Bagian quick actions telah dihapus di sini */}
                     <form onSubmit={handleSubmit} className="flex items-center gap-3">
                         <input
                             type="text"
-                            placeholder="Tanya Sensei di sini..."
+                            placeholder="Tanyakan sesuatu pada Sensei Bahasa Jepangmu..."
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            className="w-full bg-slate-100 dark:bg-slate-700/80 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-slate-100 dark:bg-slate-700/80 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400"
+                            disabled={isAiLoading}
                         />
-                        <button type="submit" disabled={isAiLoading || !inputText} className="bg-blue-600 text-white p-3 rounded-lg disabled:bg-slate-400 disabled:cursor-not-allowed">
+                        <button type="submit" disabled={isAiLoading || !inputText} className="bg-blue-600 text-white p-3 rounded-lg disabled:bg-slate-400 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors">
                             <Send className="h-5 w-5" />
                         </button>
                     </form>
                     <div className="text-xs text-center text-slate-400 mt-3 flex items-center justify-center gap-4">
-                        <p>Riwayat chat {settings.aiChatHistoryEnabled ? 'ON' : 'OFF'}.</p>
-                        {settings.aiChatHistoryEnabled && aiMessages.length > 1 && (
-                            <button onClick={clearAiChat} className="flex items-center gap-1 hover:text-slate-500"><Trash2 className="h-3 w-3"/> Bersihkan Chat</button>
+                        <p>Riwayat obrolan: {settings.aiChatHistoryEnabled ? 'AKTIF' : 'NONAKTIF'}.</p>
+                        {settings.aiChatHistoryEnabled && aiMessages.length > 0 && (
+                            <button onClick={clearAiChat} className="flex items-center gap-1 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 className="h-3 w-3"/> Bersihkan Obrolan</button>
                         )}
                     </div>
                 </div>
