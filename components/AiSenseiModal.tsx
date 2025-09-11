@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
 
@@ -16,7 +14,8 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
     const chatEndRef = useRef<HTMLDivElement>(null);
     
     // Mock settings object karena external store tidak tersedia
-    const settings = { aiChatHistoryEnabled: true };
+    // Dalam aplikasi nyata, ini bisa datang dari Context API, Redux, atau state global lainnya
+    const settings = { aiChatHistoryEnabled: true }; 
 
     const addAiMessage = (message: Message) => {
         setAiMessages(prevMessages => [...prevMessages, message]);
@@ -25,22 +24,6 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
     const clearAiChat = () => {
         setAiMessages([]);
     };
-
-    // Menghapus daftar quick actions karena fitur ini dihilangkan
-    // const quickActions = [
-    //     "Jelaskan struktur kalimat dasar Bahasa Jepang.",
-    //     "Apa perbedaan penggunaan partikel を dan が?",
-    //     "Berikan beberapa salam dalam Bahasa Jepang dan artinya.",
-    //     "Bagaimana cara mengucapkan 'terima kasih banyak' dalam Bahasa Jepang?",
-    //     "Tuliskan hiragana dan katakana untuk 'Sushi'.",
-    //     "Ajari saya cara memperkenalkan diri dalam Bahasa Jepang.",
-    //     "Apa saja ungkapan dasar untuk berbelanja di Jepang?",
-    //     "Jelaskan sistem penulisan Bahasa Jepang (hiragana, katakana, kanji).",
-    //     "Berikan 5 kata sifat dasar dalam Bahasa Jepang.",
-    //     "Bagaimana cara menanyakan arah dalam Bahasa Jepang?",
-    //     "Sebutkan beberapa frasa umum untuk percakapan sehari-hari.",
-    //     "Jelaskan konsep 'honorifics' (keigo) dalam Bahasa Jepang."
-    // ];
 
     // Tutup modal dengan tombol escape
     useEffect(() => {
@@ -76,7 +59,7 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
         const systemPrompt = "Anda adalah 'Sensei' yang bijaksana, sabar, dan ramah, serta seorang ahli dalam mengajar Bahasa Jepang. Tugas Anda adalah membantu pengguna memahami Bahasa Jepang dari tingkat pemula hingga lanjutan, menjawab pertanyaan mereka, menjelaskan tata bahasa, kosa kata, budaya, dan memberikan bimbingan yang personal. Selalu gunakan bahasa yang mudah dimengerti, berikan contoh yang relevan, tips belajar yang efektif, dan dorongan positif. Jawab dengan nada yang hangat, penuh semangat, dan menyenangkan. Ingat, tujuan utama Anda adalah membuat belajar Bahasa Jepang menjadi pengalaman yang menyenangkan dan efektif bagi pengguna.";
 
         // Mengonversi riwayat pesan menjadi format yang diterima oleh Gemini API
-        // Termasuk pesan user yang baru saja ditambahkan
+        // Termasuk pesan user yang baru saja ditambahkan (untuk konteks)
         const chatHistoryForApi = [...aiMessages, newUserMessage].map(msg => ({
             role: msg.role,
             parts: [{ text: msg.text }]
@@ -127,9 +110,20 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        // 1) Backdrop: klik area gelap = tutup
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            // Memastikan klik hanya terjadi di backdrop, bukan di modal
+            if (e.target === e.currentTarget) {
+              closeAiSensei();
+            }
+          }}
+        >
+            {/* 2) Konten modal: stop propagation supaya klik di dalam modal tidak menutup */}
             <div 
                 className="w-full max-w-2xl h-[85vh] bg-white dark:bg-slate-800 rounded-lg shadow-2xl flex flex-col"
+                onClick={(e) => e.stopPropagation()} // Mencegah klik di dalam modal
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
@@ -137,7 +131,13 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
                         <Bot className="h-6 w-6 text-blue-500"/>
                         <h2 className="text-lg font-semibold text-slate-800 dark:text-white">AI Sensei Jepang</h2>
                     </div>
-                    <button onClick={closeAiSensei} className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+                    {/* 3) Tombol X: type='button' + stopPropagation */}
+                    <button 
+                      type="button" // Pastikan tombol tidak melakukan submit form
+                      aria-label="Tutup AI Sensei" 
+                      onClick={closeAiSensei} 
+                      className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 pointer-events-auto"
+                    >
                         <X className="h-5 w-5 text-slate-500" />
                     </button>
                 </div>
@@ -169,7 +169,6 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
                 
                 {/* Input Area */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                     {/* Bagian quick actions telah dihapus di sini */}
                     <form onSubmit={handleSubmit} className="flex items-center gap-3">
                         <input
                             type="text"

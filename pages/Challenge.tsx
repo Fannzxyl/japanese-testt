@@ -1,121 +1,107 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, CheckCircle, XCircle, ChevronRight, Play } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Volume2, CheckCircle, XCircle, ChevronRight, Play, Award, Clock, Search, ListFilter } from 'lucide-react';
 
-// Added a type for the kana items for better type safety
+// --- Data & Konfigurasi ---
+// Interface untuk entri Kana di KANA_ORDER_FULL
+interface KanaOrderEntry {
+    key: string; // Romaji key like 'a', 'ka', 'kya'
+    hira: string; // Hiragana character
+    kata: string; // Katakana character
+    group: string; // Group key like 'a', 'k', 'kya'
+    type: "base" | "dakuten" | "youon"; // Type of kana
+}
+
+// Data lengkap Hiragana, Katakana, dan Romaji mappings
+export const KANA_ORDER_FULL: KanaOrderEntry[] = [
+    { key: "a", hira: "あ", kata: "ア", group: "a", type: "base" }, { key: "i", hira: "い", kata: "イ", group: "a", type: "base" }, { key: "u", hira: "う", kata: "ウ", group: "a", type: "base" }, { key: "e", hira: "え", kata: "エ", group: "a", type: "base" }, { key: "o", hira: "お", kata: "オ", group: "a", type: "base" },
+    { key: "ka", hira: "か", kata: "カ", group: "ka", type: "base" }, { key: "ki", hira: "き", kata: "キ", group: "ka", type: "base" }, { key: "ku", hira: "く", kata: "ク", group: "ka", type: "base" }, { key: "ke", hira: "け", kata: "ケ", group: "ka", type: "base" }, { key: "ko", hira: "こ", kata: "コ", group: "ka", type: "base" },
+    { key: "sa", hira: "さ", kata: "サ", group: "sa", type: "base" }, { key: "shi", hira: "し", kata: "シ", group: "sa", type: "base" }, { key: "su", hira: "す", kata: "ス", group: "sa", type: "base" }, { key: "se", hira: "せ", kata: "セ", group: "sa", type: "base" }, { key: "so", hira: "そ", kata: "ソ", group: "sa", type: "base" },
+    { key: "to", hira: "と", kata: "ト", group: "ta", type: "base" },
+
+    { key: "na", hira: "な", kata: "ナ", group: "na", type: "base" }, { key: "ni", hira: "に", kata: "ニ", group: "na", type: "base" }, { key: "nu", hira: "ぬ", kata: "ヌ", group: "na", type: "base" }, { key: "ne", hira: "ね", kata: "ネ", group: "na", type: "base" }, { key: "no", hira: "の", kata: "ノ", group: "na", type: "base" },
+    { key: "ha", hira: "は", kata: "ハ", group: "ha", type: "base" }, { key: "hi", hira: "ひ", kata: "ヒ", group: "ha", type: "base" }, { key: "fu", hira: "ふ", kata: "フ", group: "ha", type: "base" }, { key: "he", hira: "へ", kata: "ヘ", group: "ha", type: "base" }, { key: "ho", hira: "ほ", kata: "ホ", group: "ha", type: "base" },
+    { key: "ma", hira: "ま", kata: "マ", group: "ma", type: "base" }, { key: "mi", hira: "み", kata: "ミ", group: "ma", type: "base" }, { key: "mu", hira: "む", kata: "ム", group: "ma", type: "base" }, { key: "me", hira: "め", kata: "メ", group: "ma", type: "base" }, { key: "mo", hira: "も", kata: "モ", group: "ma", type: "base" },
+    { key: "ya", hira: "や", kata: "ヤ", group: "y", type: "base" }, { key: "yu", hira: "ゆ", kata: "ユ", group: "y", type: "base" }, { key: "yo", hira: "よ", kata: "ヨ", group: "y", type: "base" },
+    { key: "ra", hira: "ら", kata: "ラ", group: "r", type: "base" }, { key: "ri", hira: "り", kata: "リ", group: "r", type: "base" }, { key: "ru", hira: "る", kata: "ル", group: "r", type: "base" }, { key: "re", hira: "れ", kata: "レ", group: "r", type: "base" }, { key: "ro", hira: "ろ", kata: "ロ", group: "r", type: "base" },
+    { key: "wa", hira: "わ", kata: "ワ", group: "w", type: "base" }, { key: "wo", hira: "を", kata: "ヲ", group: "w", type: "base" }, { key: "n", hira: "ん", kata: "ン", group: "n", type: "base" },
+
+    // Dakuten & Handakuten
+    { key: "ga", hira: "が", kata: "ガ", group: "g", type: "dakuten" }, { key: "gi", hira: "ぎ", kata: "ギ", group: "g", type: "dakuten" }, { key: "gu", hira: "ぐ", kata: "グ", group: "g", type: "dakuten" }, { key: "ge", hira: "げ", kata: "ゲ", group: "g", type: "dakuten" }, { key: "go", hira: "ご", kata: "ゴ", group: "g", type: "dakuten" },
+    { key: "za", hira: "ざ", kata: "ザ", group: "z", type: "dakuten" }, { key: "ji", hira: "じ", kata: "ジ", group: "z", type: "dakuten" }, { key: "zu", hira: "ず", kata: "ズ", group: "z", type: "dakuten" }, { key: "ze", hira: "ぜ", kata: "ゼ", group: "z", type: "dakuten" }, { key: "zo", hira: "ぞ", kata: "ゾ", group: "z", type: "dakuten" },
+    { key: "da", hira: "だ", kata: "ダ", group: "d", type: "dakuten" }, { key: "dji", hira: "ぢ", kata: "ヂ", group: "d", type: "dakuten" }, { key: "dzu", hira: "づ", kata: "ヅ", group: "d", type: "dakuten" }, { key: "de", hira: "で", kata: "デ", group: "d", type: "dakuten" }, { key: "do", hira: "ど", kata: "ド", group: "d", type: "dakuten" },
+    { key: "ba", hira: "ば", kata: "バ", group: "b", type: "dakuten" }, { key: "bi", hira: "び", kata: "ビ", group: "b", type: "dakuten" }, { key: "bu", hira: "ぶ", kata: "ブ", group: "b", type: "dakuten" }, { key: "be", hira: "べ", kata: "ベ", group: "b", type: "dakuten" }, { key: "bo", hira: "ぼ", kata: "ボ", group: "b", type: "dakuten" },
+    { key: "pa", hira: "ぱ", kata: "パ", group: "p", type: "dakuten" }, { key: "pi", hira: "ぴ", kata: "ピ", group: "p", type: "dakuten" }, { key: "pu", hira: "ぷ", kata: "プ", group: "p", type: "dakuten" }, { key: "pe", hira: "ぺ", kata: "ペ", group: "p", type: "dakuten" }, { key: "po", hira: "ぽ", kata: "ポ", group: "p", type: "dakuten" },
+
+    // Youon
+    { key: "kya", hira: "きゃ", kata: "キャ", group: "ky", type: "youon" }, { key: "kyu", hira: "きゅ", kata: "キュ", group: "ky", type: "youon" }, { key: "kyo", hira: "きょ", kata: "キョ", group: "ky", type: "youon" },
+    { key: "sha", hira: "しゃ", kata: "シャ", group: "sh", type: "youon" }, { key: "shu", hira: "しゅ", kata: "シュ", group: "sh", type: "youon" }, { key: "sho", hira: "しょ", kata: "ショ", group: "sh", type: "youon" },
+    { key: "cha", hira: "ちゃ", kata: "チャ", group: "ch", type: "youon" }, { key: "chu", hira: "ちゅ", kata: "チュ", group: "ch", type: "youon" }, { key: "cho", hira: "ちょ", kata: "チョ", group: "ch", type: "youon" },
+    { key: "nya", hira: "にゃ", kata: "ニャ", group: "ny", type: "youon" }, { key: "nyu", hira: "にゅ", kata: "ニュ", group: "ny", type: "youon" }, { key: "nyo", hira: "にょ", kata: "ニョ", group: "ny", type: "youon" },
+    { key: "hya", hira: "ひゃ", kata: "ヒャ", group: "hy", type: "youon" }, { key: "hyu", hira: "ひゅ", kata: "ヒュ", group: "hy", type: "youon" }, { key: "hyo", hira: "ひょ", kata: "ヒョ", group: "hy", type: "youon" },
+    { key: "mya", hira: "みゃ", kata: "ミャ", group: "my", type: "youon" }, { key: "myu", hira: "みゅ", kata: "ミュ", group: "my", type: "youon" }, { key: "myo", hira: "みょ", kata: "ミョ", group: "my", type: "youon" },
+    { key: "rya", hira: "りゃ", kata: "リャ", group: "ry", type: "youon" }, { key: "ryu", hira: "りゅ", kata: "リュ", group: "ry", type: "youon" }, { key: "ryo", hira: "りょ", kata: "リョ", group: "ry", type: "youon" },
+    { key: "gya", hira: "ぎゃ", kata: "ギャ", group: "gy", type: "youon" }, { key: "gyu", hira: "ぎゅ", kata: "ギュ", group: "gy", type: "youon" }, { key: "gyo", hira: "ぎょ", kata: "ギョ", group: "gy", type: "youon" },
+    { key: "ja", hira: "じゃ", kata: "ジャ", group: "j", type: "youon" }, { key: "ju", hira: "じゅ", kata: "ジュ", group: "j", type: "youon" }, { key: "jo", hira: "じょ", kata: "ジョ", group: "j", type: "youon" },
+    { key: "bya", hira: "びゃ", kata: "ビャ", group: "by", type: "youon" }, { key: "byu", hira: "びゅ", kata: "ビュ", group: "by", type: "youon" }, { key: "byo", hira: "びょ", kata: "ビョ", group:"by", type: "youon" },
+    { key: "pya", hira: "ぴゃ", kata: "パ", group: "py", type: "youon" }, { key: "pyu", hira: "ぴゅ", kata: "ピュ", group: "py", type: "youon" }, { key: "pyo", hira: "ぴょ", kata: "ピョ", group: "py", type: "youon" },
+];
+
+export const KANA_GROUPS = Array.from(new Set(KANA_ORDER_FULL.map(item => item.group))).map(groupKey => {
+    const groupItems = KANA_ORDER_FULL.filter(item => item.group === groupKey);
+    const label = groupItems.map(item => item.key).join(' ');
+    const type = groupItems[0]?.type || 'base'; // Assuming consistent type within a group
+    return { key: groupKey, label, type };
+});
+
+const HIRA_MAP = new Map(KANA_ORDER_FULL.map(item => [item.key, item.hira]));
+const KATA_MAP = new Map(KANA_ORDER_FULL.map(item => [item.key, item.kata]));
+const ROMAJI_TO_KANA_MAP = {
+    'hiragana': HIRA_MAP,
+    'katakana': KATA_MAP,
+    'both': new Map<string, string>([...HIRA_MAP, ...KATA_MAP]) // Combined map for 'both' script
+};
+
+// --- Definisi Tipe Data ---
 interface KanaItem {
     char: string;
     romaji: string;
-    group: string;
 }
 
-interface KanjiItem {
-    id: number;
-    character: string;
-    meaning: string;
-    onyomi: string[];
-    kunyomi: string[];
-    strokes: number;
-    jlptLevel: number;
-}
-
-// Data Hiragana, Katakana, dan Kanji
-const dataSets = {
-    hiragana: [
-        { char: "あ", romaji: "a", group: "a" }, { char: "い", romaji: "i", group: "a" }, { char: "う", romaji: "u", group: "a" }, { char: "え", romaji: "e", group: "a" }, { char: "お", romaji: "o", group: "a" },
-        { char: "か", romaji: "ka", group: "k" }, { char: "き", romaji: "ki", group: "k" }, { char: "く", romaji: "ku", group: "k" }, { char: "け", romaji: "ke", group: "k" }, { char: "こ", romaji: "ko", group: "k" },
-        { char: "さ", romaji: "sa", group: "s" }, { char: "し", romaji: "shi", group: "s" }, { char: "す", romaji: "su", group: "s" }, { char: "せ", romaji: "se", group: "s" }, { char: "そ", romaji: "so", group: "s" },
-        { char: "た", romaji: "ta", group: "t" }, { char: "ち", romaji: "chi", group: "t" }, { char: "つ", romaji: "tsu", group: "t" }, { char: "て", romaji: "te", group: "t" }, { char: "と", romaji: "to", group: "t" },
-        { char: "な", romaji: "na", group: "n" }, { char: "に", romaji: "ni", group: "n" }, { char: "ぬ", romaji: "nu", group: "n" }, { char: "ね", romaji: "ne", group: "n" }, { char: "の", romaji: "no", group: "n" },
-        { char: "は", romaji: "ha", group: "h" }, { char: "ひ", romaji: "hi", group: "h" }, { char: "ふ", romaji: "fu", group: "h" }, { char: "へ", romaji: "he", group: "h" }, { char: "ほ", romaji: "ho", group: "h" },
-        { char: "ま", romaji: "ma", group: "m" }, { char: "み", romaji: "mi", group: "m" }, { char: "む", romaji: "mu", group: "m" }, { char: "め", "romaji": "me", group: "m" }, { char: "も", romaji: "mo", group: "m" },
-        { char: "や", romaji: "ya", group: "y" }, { char: "ゆ", romaji: "yu", group: "y" }, { char: "よ", romaji: "yo", group: "y" },
-        { char: "ら", romaji: "ra", group: "r" }, { char: "り", romaji: "ri", group: "r" }, { char: "る", romaji: "ru", group: "r" }, { char: "れ", romaji: "re", group: "r" }, { char: "ろ", romaji: "ro", group: "r" },
-        { char: "わ", romaji: "wa", group: "w" }, { char: "を", romaji: "wo", group: "w" },
-        { char: "ん", romaji: "n", group: "n_special" }
-    ],
-    katakana: [
-        { char: "ア", romaji: "a", group: "a" }, { char: "イ", romaji: "i", group: "a" }, { char: "ウ", romaji: "u", group: "a" }, { char: "エ", romaji: "e", group: "a" }, { char: "オ", romaji: "o", group: "a" },
-        { char: "カ", romaji: "ka", group: "k" }, { char: "キ", romaji: "ki", group: "k" }, { char: "ク", romaji: "ku", group: "k" }, { char: "ケ", romaji: "ke", group: "k" }, { char: "コ", romaji: "ko", group: "k" },
-        { char: "サ", romaji: "sa", group: "s" }, { char: "シ", romaji: "shi", group: "s" }, { char: "ス", romaji: "su", group: "s" }, { char: "セ", romaji: "se", group: "s" }, { char: "ソ", romaji: "so", group: "s" },
-        { char: "タ", romaji: "ta", group: "t" }, { char: "チ", romaji: "chi", group: "t" }, { char: "ツ", romaji: "tsu", group: "t" }, { char: "テ", romaji: "te", group: "t" }, { char: "ト", romaji: "to", group: "t" },
-        { char: "ナ", romaji: "na", group: "n" }, { char: "ニ", romaji: "ni", group: "n" }, { char: "ヌ", romaji: "nu", group: "n" }, { char: "ネ", romaji: "ne", group: "n" }, { char: "ノ", romaji: "no", group: "n" },
-        { char: "ハ", romaji: "ha", group: "h" }, { char: "ヒ", romaji: "hi", group: "h" }, { char: "フ", romaji: "fu", group: "h" }, { char: "ヘ", romaji: "he", group: "h" }, { char: "ホ", romaji: "ho", group: "h" },
-        { char: "マ", romaji: "ma", group: "m" }, { char: "ミ", romaji: "mi", group: "m" }, { char: "ム", romaji: "mu", group: "m" }, { char: "メ", romaji: "me", group: "m" }, { char: "モ", romaji: "mo", group: "m" },
-        { char: "ヤ", romaji: "ya", group: "y" }, { char: "ユ", romaji: "yu", group: "y" }, { char: "ヨ", romaji: "yo", group: "y" },
-        { char: "ラ", romaji: "ra", group: "r" }, { char: "リ", romaji: "ri", group: "r" }, { char: "ル", romaji: "ru", group: "r" }, { char: "レ", romaji: "re", group: "r" }, { char: "ロ", romaji: "ro", group: "r" },
-        { char: "ワ", romaji: "wa", group: "w" }, { char: "ヲ", romaji: "wo", group: "w" },
-        { char: "ン", romaji: "n", group: "n_special" }
-    ],
-    kanji: [
-        { id: 1, character: "日", meaning: "Sun, day", onyomi: ["ニチ", "ジツ"], kunyomi: ["ひ", "び", "か"], strokes: 4, jlptLevel: 5 },
-        { id: 2, character: "본", meaning: "Book, origin", onyomi: ["ホン"], kunyomi: ["もと"], strokes: 5, jlptLevel: 5 },
-        { id: 3, character: "人", meaning: "Person", onyomi: ["ジン", "ニン"], kunyomi: ["ひと"], strokes: 2, jlptLevel: 5 },
-        { id: 4, character: "大", meaning: "Big, large", onyomi: ["ダイ", "タイ"], kunyomi: ["おお"], strokes: 3, jlptLevel: 5 },
-        { id: 5, character: "학", meaning: "Study, learn", onyomi: ["ガク"], kunyomi: ["まな(ぶ)"], strokes: 8, jlptLevel: 5 },
-        { id: 6, character: "수", meaning: "Water", onyomi: ["スイ"], kunyomi: ["みず"], strokes: 4, jlptLevel: 5 },
-        { id: 7, character: "상", meaning: "Up, above", onyomi: ["ジョウ", "ショウ"], kunyomi: ["うえ", "あ(がる)", "かみ"], strokes: 3, jlptLevel: 5 },
-        { id: 8, character: "하", meaning: "Down, below", onyomi: ["カ", "ゲ"], kunyomi: ["した", "さ(がる)"], strokes: 3, jlptLevel: 5 },
-        { id: 9, character: "전", meaning: "Before, in front", onyomi: ["ゼン"], kunyomi: ["まえ"], strokes: 9, jlptLevel: 5 },
-        { id: 10, character: "후", meaning: "After, behind", onyomi: ["ゴ", "コウ"], kunyomi: ["あと", "うし(ろ)"], strokes: 9, jlptLevel: 5 },
-        { id: 11, character: "화", meaning: "To talk", onyomi: ["ワ"], kunyomi: ["はな(す)", "はなし"], strokes: 13, jlptLevel: 5 },
-        { id: 12, character: "수", meaning: "Hand", onyomi: ["シュ"], kunyomi: ["て"], strokes: 4, jlptLevel: 5 },
-        { id: 13, character: "원", meaning: "Yen, circle", onyomi: ["エン"], kunyomi: ["まる(い)"], strokes: 4, jlptLevel: 5 },
-        { id: 14, character: "시", meaning: "Time", onyomi: ["ジ"], kunyomi: ["とき"], strokes: 10, jlptLevel: 5 },
-        { id: 15, character: "분", meaning: "Minute, to divide", onyomi: ["ブン", "フン", "プン"], kunyomi: ["わ(ける)"], strokes: 4, jlptLevel: 5 },
-    ],
-};
-
-const KANA_ORDER: Array<{ key: string; hira: string; kata: string; group: string }> = [
-    { key: "a", hira: "あ", kata: "ア", group: "a" }, { key: "i", hira: "い", kata: "イ", group: "a" }, { key: "u", hira: "う", kata: "ウ", group: "a" }, { key: "e", hira: "え", kata: "エ", group: "a" }, { key: "o", hira: "お", kata: "オ", group: "a" },
-    { key: "ka", hira: "か", kata: "カ", group: "ka" }, { key: "ki", hira: "き", kata: "キ", group: "ka" }, { key: "ku", hira: "く", kata: "ク", group: "ka" }, { key: "ke", hira: "け", kata: "ケ", group: "ka" }, { key: "ko", hira: "こ", kata: "コ", group: "ka" },
-    { key: "sa", hira: "さ", kata: "サ", group: "sa" }, { key: "shi", hira: "し", kata: "シ", group: "sa" }, { key: "su", hira: "す", kata: "ス", group: "sa" }, { key: "se", hira: "せ", kata: "セ", group: "sa" }, { key: "so", hira: "そ", kata: "ソ", group: "sa" },
-    { key: "ta", hira: "た", kata: "タ", group: "ta" }, { key: "chi", hira: "ち", kata: "チ", group: "ta" }, { key: "tsu", hira: "つ", kata: "ツ", group: "ta" }, { key: "te", hira: "て", kata: "テ", group: "ta" }, { key: "to", hira: "と", kata: "ト", group: "ta" },
-    { key: "na", hira: "な", kata: "ナ", group: "na" }, { key: "ni", hira: "に", kata: "ニ", group: "na" }, { key: "nu", hira: "ぬ", kata: "ヌ", group: "na" }, { key: "ne", hira: "ね", kata: "ネ", group: "na" }, { key: "no", hira: "の", kata: "ノ", group: "na" },
-    { key: "ha", hira: "は", kata: "ハ", group: "ha" }, { key: "hi", hira: "ひ", kata: "ヒ", group: "ha" }, { key: "fu", hira: "ふ", kata: "フ", group: "ha" }, { key: "he", hira: "へ", kata: "ヘ", group: "ha" }, { key: "ho", hira: "ほ", kata: "ホ", group: "ha" },
-    { key: "ma", hira: "ま", kata: "マ", group: "ma" }, { key: "mi", hira: "み", kata: "ミ", group: "ma" }, { key: "mu", hira: "む", kata: "ム", group: "ma" }, { key: "me", hira: "め", kata: "メ", group: "ma" }, { key: "mo", hira: "も", kata: "モ", group: "ma" },
-    { key: "ya", hira: "や", kata: "ヤ", group: "ya" }, { key: "yu", hira: "ゆ", kata: "ユ", group: "ya" }, { key: "yo", hira: "よ", kata: "ヨ", group: "yo" },
-    { key: "ra", hira: "ら", kata: "ラ", group: "ra" }, { key: "ri", hira: "り", kata: "リ", group: "ra" }, { key: "ru", hira: "る", kata: "ル", group: "ra" }, { key: "re", hira: "れ", kata: "レ", group: "ra" }, { key: "ro", hira: "ろ", kata: "ロ", group: "ra" },
-    { key: "wa", hira: "わ", kata: "ワ", group: "wa" }, { key: "wo", hira: "を", kata: "ヲ", group: "wo" }, { key: "n", hira: "ん", kata: "ン", group: "n" },
-    { key: "ga", hira: "が", kata: "ガ", group: "ga" }, { key: "gi", hira: "ぎ", kata: "ギ", group: "ga" }, { key: "gu", hira: "ぐ", kata: "グ", group: "ga" }, { key: "ge", hira: "げ", kata: "ゲ", group: "ga" }, { key: "go", hira: "ご", kata: "ゴ", group: "ga" },
-    { key: "za", hira: "ざ", kata: "ザ", group: "za" }, { key: "ji", hira: "じ", kata: "ジ", group: "za" }, { key: "zu", hira: "ず", kata: "ズ", group: "za" }, { key: "ze", hira: "ぜ", kata: "ゼ", group: "za" }, { key: "zo", hira: "ぞ", kata: "ゾ", group: "za" },
-    { key: "da", hira: "だ", kata: "ダ", group: "da" }, { key: "ji", hira: "ぢ", kata: "ヂ", group: "da" }, { key: "zu", hira: "づ", kata: "ヅ", group: "da" }, { key: "de", hira: "で", kata: "デ", group: "da" }, { key: "do", hira: "ど", kata: "ド", group: "da" },
-    { key: "ba", hira: "ば", kata: "バ", group: "ba" }, { key: "bi", hira: "び", kata: "ビ", group: "ba" }, { key: "bu", hira: "ぶ", kata: "ブ", group: "ba" }, { key: "be", hira: "べ", kata: "ベ", group: "ba" }, { key: "bo", hira: "ぼ", kata: "ボ", group: "ba" },
-    { key: "pa", hira: "ぱ", kata: "パ", group: "pa" }, { key: "pi", hira: "ぴ", kata: "ピ", group: "pa" }, { key: "pu", hira: "ぷ", kata: "プ", group: "pa" }, { key: "pe", hira: "ぺ", kata: "ペ", group: "pa" }, { key: "po", hira: "ぽ", kata: "ポ", group: "pa" },
-    { key: "kya", hira: "きゃ", kata: "キャ", group: "kya" }, { key: "kyu", hira: "きゅ", kata: "キュ", group: "kya" }, { key: "kyo", hira: "きょ", kata: "キョ", group: "kya" },
-    { key: "sha", hira: "しゃ", kata: "シャ", group: "sha" }, { key: "shu", hira: "しゅ", kata: "シュ", group: "sha" }, { key: "sho", hira: "しょ", kata: "ショ", group: "sha" },
-    { key: "cha", hira: "ちゃ", kata: "チャ", group: "cha" }, { key: "chu", hira: "ちゅ", kata: "チュ", group: "cha" }, { key: "cho", hira: "ちょ", kata: "チョ", group: "cha" },
-    { key: "nya", hira: "にゃ", kata: "ニャ", group: "nya" }, { key: "nyu", hira: "にゅ", kata: "ニュ", group: "nya" }, { key: "nyo", hira: "にょ", kata: "ニョ", group: "nya" },
-    { key: "hya", hira: "ひゃ", kata: "ヒャ", group: "hya" }, { key: "hyu", hira: "ひゅ", kata: "ヒュ", group: "hya" }, { key: "hyo", hira: "ひょ", kata: "ヒョ", group: "hya" },
-    { key: "mya", hira: "みゃ", kata: "ミャ", group: "mya" }, { key: "myu", hira: "みゅ", kata: "ミュ", group: "mya" }, { key: "myo", hira: "みょ", kata: "ミョ", group: "mya" },
-    { key: "rya", hira: "りゃ", kata: "リャ", group: "rya" }, { key: "ryu", hira: "りゅ", kata: "リュ", group: "rya" }, { key: "ryo", hira: "りょ", kata: "リョ", group: "rya" },
-    { key: "gya", hira: "ぎゃ", kata: "ギャ", group: "gya" }, { key: "gyu", hira: "ぎゅ", kata: "ギュ", group: "gya" }, { key: "gyo", hira: "ぎょ", kata: "ギョ", group: "gya" },
-    { key: "ja", hira: "じゃ", kata: "ジャ", group: "ja" }, { key: "ju", hira: "じゅ", kata: "ジュ", group: "ja" }, { key: "jo", hira: "じょ", kata: "ジョ", group: "ja" },
-    { key: "bya", hira: "びゃ", kata: "ビャ", group: "bya" }, { key: "byu", hira: "びゅ", kata: "ビュ", group: "bya" }, { key: "byo", hira: "びょ", kata: "ビョ", group: "bya" },
-    { key: "pya", hira: "ぴゃ", kata: "パ", group: "pya" }, { key: "pyu", hira: "ぴゅ", kata: "ピュ", group: "pya" }, { key: "pyo", hira: "ぴょ", kata: "ピョ", group: "pya" },
-];
-
-// Definisi Tipe Data
 export type SelectionMode = "range" | "single" | "preset";
-export type Selection =
-    | { kind: "range"; value: { from: string; to: string } }
-    | { kind: "single"; value: string[] }
-    | { kind: "preset"; value: "all" | "aiueo" | "base" | "dakuten" | "youon" | "jft" | "pairswap" };
+export type PresetSelectionValue = "all" | "base-all" | "dakuten-all" | "youon-all" | "jft-drill" | "aiueo-m" | "confusion" | "srs-due" | "custom";
+export type TestScript = "hiragana" | "katakana" | "both";
+export type QuestionDirection = "kana-to-romaji" | "romaji-to-kana" | "audio-kana-to-romaji" | "audio-romaji-to-kana";
+export type AnswerMode = "typing" | "mcq";
+
+export interface TestSelection {
+    kind: SelectionMode;
+    value: { from?: string; to?: string; tokens?: string[]; preset?: PresetSelectionValue; customSet?: string[] };
+}
 
 export interface TestConfig {
-    domain: "kana";
-    script: "hiragana" | "katakana" | "both";
-    direction: "kana-to-romaji" | "romaji-to-kana";
-    mode: "typing" | "mcq" | "listening";
+    script: TestScript;
+    direction: QuestionDirection;
+    mode: AnswerMode;
     count: number;
-    selection: Selection;
+    selection: TestSelection;
     challenge: { enabled: boolean; durationSec: number };
-    createdAt: string;
 }
 
+// Initial state for test configuration
+const initialTestConfig: TestConfig = {
+    script: "hiragana",
+    direction: "kana-to-romaji",
+    mode: "typing",
+    count: 10,
+    selection: { kind: "preset", value: { preset: "all" } },
+    challenge: { enabled: false, durationSec: 3 * 60 }, // Default 3 minutes
+};
+
+// --- Utility Functions ---
 
 // Fungsi untuk mengacak array
-const shuffleArray = <T extends any[]>(array: T): T => {
-    let newArray = [...array] as T;
+const shuffleArray = <T,>(array: T[]): T[] => {
+    let newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
@@ -123,107 +109,754 @@ const shuffleArray = <T extends any[]>(array: T): T => {
     return newArray;
 };
 
-// Komponen untuk menampilkan kartu Kanji
-const KanjiCard: React.FC<{ item: KanjiItem }> = ({ item }) => (
-    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-md flex flex-col items-center text-center">
-        <div className="w-24 h-24 bg-slate-100 dark:bg-slate-700 flex items-center justify-center rounded-lg mb-4">
-            <p className="text-6xl font-serif">{item.character}</p>
-        </div>
-        <p className="text-lg font-semibold">{item.meaning}</p>
-        <div className="flex space-x-4 mt-2 text-sm text-slate-500 dark:text-slate-400">
-            <span>On: {item.onyomi.join(', ')}</span>
-            <span>Kun: {item.kunyomi.join(', ')}</span>
-        </div>
-        <div className="mt-2 text-xs">
-            <span>Strokes: {item.strokes}</span> | <span>JLPT N{item.jlptLevel}</span>
-        </div>
-    </div>
-);
+// Util untuk normalisasi input
+const normalize = (s: string): string => s.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
+const keyIndex = new Map(KANA_ORDER_FULL.map((x, i) => [x.key, i]));
+const groupKeyIndex = new Map(KANA_GROUPS.map((x, i) => [x.key, i]));
 
-const KanjiLearn: React.FC = () => {
+// Fungsi untuk menyelesaikan seleksi berdasarkan TestSelection
+const resolveSelection = (selection: TestSelection): { keys: string[], invalidTokens: string[], rangeLabel: string } => {
+    let resolvedKeys: string[] = [];
+    let invalidTokens: string[] = [];
+    let rangeLabel: string = "Semua";
+    const allKeys = KANA_ORDER_FULL.map(x => x.key);
+
+    if (selection.kind === "preset") {
+        const preset = selection.value.preset;
+        if (preset === "all") {
+            resolvedKeys = allKeys;
+            rangeLabel = "Semua Kana";
+        } else if (preset === "base-all") {
+            resolvedKeys = KANA_ORDER_FULL.filter(item => item.type === "base").map(x => x.key);
+            rangeLabel = "Dasar semua";
+        } else if (preset === "dakuten-all") {
+            resolvedKeys = KANA_ORDER_FULL.filter(item => item.type === "dakuten").map(x => x.key);
+            rangeLabel = "Dakuon/Handakuon";
+        } else if (preset === "youon-all") {
+            resolvedKeys = KANA_ORDER_FULL.filter(item => item.type === "youon").map(x => x.key);
+            rangeLabel = "Youon";
+        } else if (preset === "jft-drill") {
+            // JFT Drill logic from index.html (aiueo -> ra/ro, plus ga-go, za-zo, da-do)
+            const jftGroupsKeys = KANA_GROUPS.filter(g =>
+                (groupKeyIndex.get(g.key)! >= (groupKeyIndex.get('a') || 0) && groupKeyIndex.get(g.key)! <= (groupKeyIndex.get('r') || KANA_GROUPS.length - 1)) ||
+                (['g', 'z', 'd'].includes(g.key) && g.type === "dakuten")
+            ).map(g => g.key);
+            resolvedKeys = KANA_ORDER_FULL.filter(item => jftGroupsKeys.includes(item.group)).map(item => item.key);
+            rangeLabel = "JFT Drill";
+        } else if (preset === "aiueo-m") {
+            const fromIdx = keyIndex.get('a');
+            const toIdx = keyIndex.get('mo'); // 'mo' is the last item in 'ma mi mu me mo' group
+            if (fromIdx !== undefined && toIdx !== undefined) {
+                resolvedKeys = KANA_ORDER_FULL.slice(fromIdx, toIdx + 1).map(x => x.key);
+                rangeLabel = "a i u e o → ma mi mu me mo";
+            } else {
+                resolvedKeys = []; // Handle case where indices are not found
+                rangeLabel = "Rentang tidak valid";
+            }
+        } else if (preset === "custom") {
+            // The logic for custom selection is handled directly when the modal saves
+            resolvedKeys = selection.value.customSet || [];
+            rangeLabel = `Huruf Tertentu (${resolvedKeys.length})`;
+        } else if (preset === "confusion" || preset === "srs-due") {
+             // For now, in this isolated component, these will just return all keys
+            resolvedKeys = allKeys;
+            rangeLabel = {
+                "confusion": "Latih Pasangan Tertukar (demo)",
+                "srs-due": "Review Hari Ini (demo)"
+            }[preset] || "Custom (demo)";
+        } else {
+            // Specific group presets like "a", "ka", etc.
+            const groupItem = KANA_GROUPS.find(g => g.key === preset);
+            if (groupItem) {
+                resolvedKeys = KANA_ORDER_FULL.filter(item => item.group === preset).map(x => x.key);
+                rangeLabel = groupItem.label;
+            }
+        }
+    } else if (selection.kind === "single") {
+        const tokens = normalize(selection.value.tokens?.join(" ") || "").split(" ").filter(Boolean);
+        const uniqueTokens = Array.from(new Set(tokens));
+        resolvedKeys = uniqueTokens.filter(t => keyIndex.has(t));
+        invalidTokens = uniqueTokens.filter(t => !keyIndex.has(t));
+        rangeLabel = tokens.join(', ') || "Grup Tunggal";
+    } else if (selection.kind === "range") {
+        const fromKey = normalize(selection.value.from || "");
+        const toKey = normalize(selection.value.to || "");
+        const fromIdx = keyIndex.get(fromKey);
+        const toIdx = keyIndex.get(toKey);
+
+        if (fromIdx !== undefined && toIdx !== undefined) {
+            const [lo, hi] = fromIdx <= toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx]; // Auto-swap
+            resolvedKeys = KANA_ORDER_FULL.slice(lo, hi + 1).map(x => x.key);
+            rangeLabel = `${KANA_GROUPS.find(g => g.key === KANA_ORDER_FULL[lo].group)?.label || KANA_ORDER_FULL[lo].key} → ${KANA_GROUPS.find(g => g.key === KANA_ORDER_FULL[hi].group)?.label || KANA_ORDER_FULL[hi].key}`;
+        } else if (fromIdx !== undefined) {
+            resolvedKeys = [KANA_ORDER_FULL[fromIdx].key];
+            rangeLabel = KANA_GROUPS.find(g => g.key === KANA_ORDER_FULL[fromIdx].group)?.label || KANA_ORDER_FULL[fromIdx].key;
+        } else if (toIdx !== undefined) {
+            resolvedKeys = [KANA_ORDER_FULL[toIdx].key];
+            rangeLabel = KANA_GROUPS.find(g => g.key === KANA_ORDER_FULL[toIdx].group)?.label || KANA_ORDER_FULL[toIdx].key;
+        }
+    }
+
+    return { keys: resolvedKeys, invalidTokens, rangeLabel };
+};
+
+// Fungsi untuk membangun bank soal dari selection
+const buildKanaBank = (config: TestConfig): KanaItem[] => {
+    const { keys } = resolveSelection(config.selection);
+    const items = KANA_ORDER_FULL.filter(x => keys.includes(x.key));
+
+    return items.map(x => {
+        let char: string;
+        if (config.script === "hiragana") char = x.hira;
+        else if (config.script === "katakana") char = x.kata;
+        else char = [x.hira, x.kata][Math.random() < .5 ? 0 : 1]; // "both" script
+
+        return { romaji: x.key, char };
+    });
+};
+
+const romajiStringToKana = (str: string, script: "hiragana" | "katakana" | "both"): string => {
+    let s = str.toLowerCase().replace(/\s+/g, '');
+    let out = '';
+    const map = ROMAJI_TO_KANA_MAP[script];
+
+    // Longer matches first
+    const romajiSortedByLength = Array.from(map.keys()).sort((a, b) => b.length - a.length);
+
+    while (s.length) {
+        let matched = false;
+
+        if (s.length >= 2 && !'aeiouy'.includes(s[0]) && s[0] === s[1] && s[0] !== 'n') {
+            out += (script === 'hiragana' || script === 'both' ? 'っ' : 'ッ');
+            s = s.slice(1);
+            matched = true;
+            continue;
+        }
+        
+        for (const r of romajiSortedByLength) {
+            if (s.startsWith(r)) {
+                const kanaChar = map.get(r);
+                if (kanaChar) {
+                    out += kanaChar;
+                    s = s.slice(r.length);
+                    matched = true;
+                    break;
+                }
+            }
+        }
+
+        if (!matched) {
+            if (s[0] === 'n') {
+                if (s.length === 1 || !'aeiouy'.includes(s[1])) {
+                    out += map.get('n');
+                    s = s.slice(1);
+                    matched = true;
+                }
+            }
+        }
+        
+        if (!matched) {
+            out += s[0];
+            s = s.slice(1);
+        }
+    }
+    return out;
+};
+
+
+// Simplified copy for Toast component
+interface ToastProps {
+    message: string;
+    type?: 'info' | 'warn';
+    duration?: number;
+    onDismiss?: () => void;
+}
+
+const Toast: React.FC<ToastProps> = ({ message, type = 'info', duration = 2500, onDismiss }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        setIsVisible(true);
+        timerRef.current = setTimeout(() => {
+            setIsVisible(false);
+        }, duration);
+
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [message, type, duration]);
+
+    const handleTransitionEnd = useCallback(() => {
+        if (!isVisible && onDismiss) {
+            onDismiss();
+        }
+    }, [isVisible, onDismiss]);
+
     return (
-        <div className="space-y-6">
-            <h2 className="text-3xl font-bold">Beginner Kanji (N5-N4 Level)</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                {dataSets.kanji.map(item => (
-                    <KanjiCard key={item.id} item={item} />
-                ))}
+        <div
+            className={`fixed left-1/2 -translate-x-1/2 bottom-5 px-4 py-2 rounded-lg shadow-lg z-[1090] transition-opacity duration-300
+                         ${type === 'info' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'}
+                         ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            onTransitionEnd={handleTransitionEnd}
+            role="status"
+            aria-live="polite"
+        >
+            {message}
+        </div>
+    );
+};
+
+
+// Component for Custom Set Modal
+interface CustomSetModalProps {
+    onClose: () => void;
+    onSave: (selectedKeys: string[]) => void;
+    initialSet: TestScript;
+    initialCustomSet: { hiragana: string[]; katakana: string[] };
+}
+
+const CustomSetModal: React.FC<CustomSetModalProps> = ({ onClose, onSave, initialSet, initialCustomSet }) => {
+    const [currentSet, setCurrentSet] = useState<TestScript>(initialSet);
+    const [selectedKeys, setSelectedKeys] = useState<string[]>(initialCustomSet[currentSet] || []);
+    const [filterText, setFilterText] = useState<string>('');
+    const [filterGroups, setFilterGroups] = useState({
+        base: true,
+        dakuten: true,
+        youon: true
+    });
+
+    const filteredKana = useMemo(() => {
+        const kanaMap = ROMAJI_TO_KANA_MAP[currentSet] || new Map();
+        const lowerFilter = filterText.toLowerCase();
+
+        return KANA_ORDER_FULL.filter(item => {
+            const groupItem = KANA_GROUPS.find(g => g.key === item.group);
+            const type = groupItem?.type || 'base';
+
+            if (!filterGroups[type]) return false;
+
+            const kanaChar = kanaMap.get(item.key) || '';
+            const matchesFilter = !lowerFilter ||
+                item.key.toLowerCase().includes(lowerFilter) ||
+                kanaChar.includes(lowerFilter);
+
+            return matchesFilter;
+        });
+    }, [currentSet, filterGroups, filterText]);
+    
+    const handleSave = useCallback(() => {
+        onSave(selectedKeys);
+        onClose();
+    }, [onSave, onClose, selectedKeys]);
+
+    const toggleSelection = useCallback((key: string) => {
+        setSelectedKeys(prev => {
+            if (prev.includes(key)) {
+                return prev.filter(k => k !== key);
+            } else {
+                return [...prev, key];
+            }
+        });
+    }, []);
+
+    const handleSetChange = useCallback((set: TestScript) => {
+        setCurrentSet(set);
+        setSelectedKeys(initialCustomSet[set] || []);
+        setFilterText('');
+        setFilterGroups({ base: true, dakuten: true, youon: true });
+    }, [initialCustomSet]);
+    
+    const toggleGroupFilter = useCallback((groupType: "base" | "dakuten" | "youon") => {
+        setFilterGroups(prev => ({
+            ...prev,
+            [groupType]: !prev[groupType],
+        }));
+    }, []);
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-[1099] overflow-y-auto p-4" onClick={onClose}>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                <h3 className="text-xl font-bold">Pilih Huruf Tertentu</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Pilih kana yang ingin kamu latih.</p>
+                <div className="flex space-x-2 mb-4">
+                    <div className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700 p-1 flex">
+                        <button onClick={() => handleSetChange("hiragana")} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${currentSet === 'hiragana' ? 'bg-blue-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Hiragana</button>
+                        <button onClick={() => handleSetChange("katakana")} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${currentSet === 'katakana' ? 'bg-blue-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Katakana</button>
+                    </div>
+                    <div className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700 p-1 flex">
+                        <button onClick={() => toggleGroupFilter("base")} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${filterGroups.base ? 'bg-blue-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Dasar</button>
+                        <button onClick={() => toggleGroupFilter("dakuten")} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${filterGroups.dakuten ? 'bg-blue-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Dakuon</button>
+                        <button onClick={() => toggleGroupFilter("youon")} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${filterGroups.youon ? 'bg-blue-600 text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Youon</button>
+                    </div>
+                </div>
+                <div className="relative mb-4">
+                    <input
+                        type="text"
+                        value={filterText}
+                        onChange={(e) => setFilterText(e.target.value)}
+                        placeholder="Cari kana/romaji..."
+                        className="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                </div>
+                <div className="flex-1 overflow-y-auto grid grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-3 pb-4">
+                    {filteredKana.map(item => {
+                        const isSelected = selectedKeys.includes(item.key);
+                        return (
+                            <button
+                                key={item.key}
+                                className={`
+                                    flex flex-col items-center justify-center p-2 rounded-lg shadow-sm
+                                    transition-all duration-200
+                                    ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 hover:bg-blue-200 dark:hover:bg-blue-600'}
+                                `}
+                                onClick={() => toggleSelection(item.key)}
+                            >
+                                <span className={`text-2xl font-bold ${isSelected ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+                                    {currentSet === 'hiragana' ? item.hira : item.kata}
+                                </span>
+                                <span className={`text-xs ${isSelected ? 'text-blue-200' : 'text-slate-500 dark:text-slate-400'}`}>
+                                    {item.key}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                        Dipilih: {selectedKeys.length} huruf
+                    </span>
+                    <div className="flex space-x-2">
+                        <button onClick={onClose} className="px-4 py-2 rounded-full font-semibold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800">Batal</button>
+                        <button onClick={handleSave} className="px-4 py-2 rounded-full font-semibold bg-blue-600 text-white hover:bg-blue-700">Simpan Set</button>
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
 
-// Util untuk normalisasi input
-const normalize = (s: string): string => s.normalize("NFKC").toLowerCase().trim().replace(/\s+/g, " ");
-const keyIndex = new Map(KANA_ORDER.map((x, i) => [x.key, i]));
+// === TestConfigPanel (UI/UX refined) ===
+const TestConfigPanel: React.FC<TestConfigPanelProps> = ({
+  testConfig,
+  setTestConfig,
+  previewCount,
+  invalidTokens,
+  startTestHandler,
+  startButtonDisabled,
+  openCustomSetModal,
+}) => {
+  // helper kecil agar perubahan state rapi & tetap kompatibel
+  const handleTestConfigChange = useCallback((
+    field: keyof TestConfig | keyof TestConfig['challenge']
+           | 'selectionKind' | 'selectionFrom' | 'selectionTo'
+           | 'selectionTokens' | 'selectionPreset',
+    value: any
+  ) => {
+    setTestConfig(prev => {
+      const next = { ...prev };
 
-// Fungsi untuk menyelesaikan seleksi
-const resolveSelection = (sel: Selection): { keys: string[], invalidTokens: string[] } => {
-    let resolvedKeys: string[] = [];
-    let invalidTokens: string[] = [];
-    const allKeys = KANA_ORDER.map(x => x.key);
-
-    if (sel.kind === "preset") {
-        if (sel.value === "all") resolvedKeys = allKeys;
-        if (sel.value === "aiueo") resolvedKeys = ["a", "i", "u", "e", "o"];
-        if (sel.value === "base") resolvedKeys = KANA_ORDER.filter(item => item.group.length === 1 && !['y', 'w', 'n'].includes(item.group)).map(x => x.key);
-        if (sel.value === "dakuten") resolvedKeys = KANA_ORDER.filter(item => ["g", "z", "d", "b", "p"].includes(item.group)).map(x => x.key);
-        if (sel.value === "youon") resolvedKeys = KANA_ORDER.filter(item => item.key.length === 3).map(x => x.key);
-    }
-
-    if (sel.kind === "single") {
-        const tokens = normalize(sel.value.join(" ")).split(" ").filter(Boolean);
-        const uniqueTokens = Array.from(new Set(tokens));
-        resolvedKeys = uniqueTokens.filter(t => keyIndex.has(t));
-        invalidTokens = uniqueTokens.filter(t => !keyIndex.has(t));
-    }
-
-    if (sel.kind === "range") {
-        const from = normalize(sel.value.from);
-        const to = normalize(sel.value.to);
-        const a = keyIndex.get(from);
-        const b = keyIndex.get(to);
-
-        if (a != null && b != null) {
-            const [lo, hi] = a <= b ? [a, b] : [b, a];
-            resolvedKeys = KANA_ORDER.slice(lo, hi + 1).map(x => x.key);
+      if (field === 'selectionKind') {
+        next.selection.kind = value as SelectionMode;
+        if (value === 'range') {
+          next.selection.value = {
+            from: localStorage.getItem('kanaTrainer_rangeFrom') || 'a',
+            to:   localStorage.getItem('kanaTrainer_rangeTo')   || 'mo',
+          };
+        } else if (value === 'single') {
+          const saved = localStorage.getItem('kanaTrainer_singleTokens');
+          next.selection.value = { tokens: saved ? JSON.parse(saved) : ['a','i','u','e','o'] };
+        } else {
+          next.selection.value = { preset: (localStorage.getItem('kanaTrainer_preset') || 'all') as PresetSelectionValue };
         }
+      } else if (field === 'selectionFrom') {
+        next.selection.value.from = value;
+        localStorage.setItem('kanaTrainer_rangeFrom', value);
+      } else if (field === 'selectionTo') {
+        next.selection.value.to = value;
+        localStorage.setItem('kanaTrainer_rangeTo', value);
+      } else if (field === 'selectionTokens') {
+        // Jika input adalah string, pisahkan menjadi array token
+        const tokens = Array.isArray(value) ? value : String(value).split(' ').filter(Boolean);
+        next.selection.value.tokens = tokens;
+        localStorage.setItem('kanaTrainer_singleTokens', JSON.stringify(tokens));
+      } else if (field === 'selectionPreset') {
+        next.selection.kind = 'preset';
+        next.selection.value = { preset: value as PresetSelectionValue };
+        localStorage.setItem('kanaTrainer_preset', value as string);
+
+        // aturan kecil biar preset JFT nyaman dipakai
+        if (value === 'jft-drill') {
+          next.direction = 'kana-to-romaji';
+          next.mode = 'mcq';
+          next.count = Math.min(next.count, 50);
+        } else if (prev.selection.value.preset === 'jft-drill') {
+          next.direction = initialTestConfig.direction;
+          next.mode = initialTestConfig.mode;
+        }
+      } else if (field === 'enabled' || field === 'durationSec') {
+        next.challenge = { ...next.challenge, [field]: value };
+      } else if (field === 'direction') {
+        next.direction = value as QuestionDirection;
+        if (String(value).includes('audio')) next.mode = 'mcq'; // listening = default MCQ
+      } else {
+        (next as any)[field] = value;
+      }
+
+      return next;
+    });
+  }, [setTestConfig]);
+
+  const groupOptions = useMemo(
+    () => KANA_GROUPS.map(g => ({ value: g.key, label: g.label })),
+    []
+  );
+
+  const isKanaScript = testConfig.script === 'hiragana' || testConfig.script === 'katakana' || testConfig.script === 'both';
+  const isMcqAutoSet = testConfig.direction.includes('audio');
+
+  useEffect(() => {
+    if (testConfig.selection.kind === 'range') {
+      const { from, to } = testConfig.selection.value;
+      const a = keyIndex.get(from || 'a');
+      const b = keyIndex.get(to   || 'n');
+      if (a !== undefined && b !== undefined && a > b) {
+        setTestConfig(prev => ({
+          ...prev,
+          selection: { ...prev.selection, value: { from: to, to: from } }
+        }));
+      }
     }
+  }, [testConfig.selection, setTestConfig]);
 
-    return { keys: resolvedKeys, invalidTokens };
+  const quickPresets = [
+    { label: 'a i u e o → ma mi mu me mo', preset: 'aiueo-m' },
+    { label: 'Dasar semua', preset: 'base-all' },
+    { label: 'Dakuon', preset: 'dakuten-all' },
+    { label: 'Youon', preset: 'youon-all' },
+    { label: 'JFT Drill', preset: 'jft-drill' },
+    { label: 'Latih Pasangan Tertukar', preset: 'confusion' }, // demo
+    { label: 'Review Hari Ini', preset: 'srs-due' },           // demo
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto">
+      {/* Hero */}
+      <header className="text-center mb-6">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+          Latihan Hiragana & Katakana
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">
+          Atur set, tipe soal, jumlah soal, dan mode tantangan.
+        </p>
+      </header>
+
+      {/* Card utama */}
+      <section className="relative rounded-2xl bg-white/90 dark:bg-slate-800/90 shadow-xl ring-1 ring-black/5 overflow-hidden">
+        <div className="p-6 md:p-8 space-y-6">
+
+          {/* Row 1: Set / Tipe / Mode / Jumlah */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Set */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Set</label>
+              <select
+                value={testConfig.script}
+                onChange={e => handleTestConfigChange('script', e.target.value as TestScript)}
+                className="w-full rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="hiragana">Hiragana</option>
+                <option value="katakana">Katakana</option>
+                <option value="both">Keduanya</option>
+              </select>
+            </div>
+
+            {/* Tipe Soal */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipe Soal</label>
+              <select
+                value={testConfig.direction}
+                onChange={e => handleTestConfigChange('direction', e.target.value as QuestionDirection)}
+                className="w-full rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="kana-to-romaji">Kana → Romaji</option>
+                <option value="romaji-to-kana">Romaji → Kana</option>
+                <option value="audio-kana-to-romaji">Listening (Kana → Romaji)</option>
+                <option value="audio-romaji-to-kana">Listening (Romaji → Kana)</option>
+              </select>
+              {/* hint kecil untuk audio */}
+              {String(testConfig.direction).includes('audio') && (
+                <p className="text-xs text-slate-500 mt-1">Listening memakai opsi Pilihan Ganda secara default.</p>
+              )}
+            </div>
+
+            {/* Mode Jawaban */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Mode Jawaban</label>
+              <select
+                value={testConfig.mode}
+                onChange={e => handleTestConfigChange('mode', e.target.value as AnswerMode)}
+                disabled={isMcqAutoSet}
+                className="w-full rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
+              >
+                <option value="typing">Ketik</option>
+                <option value="mcq">Pilihan Ganda</option>
+              </select>
+            </div>
+
+            {/* Jumlah Soal */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Jumlah Soal</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={testConfig.count}
+                  onChange={e => handleTestConfigChange('count', parseInt(e.target.value) || 1)}
+                  className="w-full rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                {[10, 25, 50, 100].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => handleTestConfigChange('count', n)}
+                    className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                      testConfig.count === n
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick presets */}
+          {isKanaScript && (
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                <span className="text-sm font-medium shrink-0">Pilih cepat:</span>
+
+                <button
+                  onClick={() => handleTestConfigChange('selectionPreset', 'all')}
+                  className={`px-3 py-1 text-sm rounded-full shrink-0 transition-colors ${
+                    testConfig.selection.kind === 'preset' && testConfig.selection.value.preset === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  Semua Kana
+                </button>
+
+                {quickPresets.map(p => (
+                  <button
+                    key={p.preset}
+                    onClick={() => handleTestConfigChange('selectionPreset', p.preset)}
+                    className={`px-3 py-1 text-sm rounded-full shrink-0 transition-colors ${
+                      testConfig.selection.kind === 'preset' && testConfig.selection.value.preset === p.preset
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+
+                <button
+                  onClick={openCustomSetModal}
+                  className={`px-3 py-1 text-sm rounded-full shrink-0 transition-colors ${
+                    testConfig.selection.kind === 'preset' && testConfig.selection.value.preset === 'custom'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  Huruf Tertentu
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Selection mode + Range/Single field */}
+          {isKanaScript && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              {/* segmented control */}
+              <div className="md:col-span-1">
+                <label className="block text-sm font-medium mb-2">Pilih mode</label>
+                <div className="flex rounded-lg bg-slate-100 dark:bg-slate-700 p-1">
+                  {(['preset','range','single'] as SelectionMode[]).map(m => (
+                    <button
+                      key={m}
+                      onClick={() => handleTestConfigChange('selectionKind', m)}
+                      className={`flex-1 py-2 rounded-lg font-medium transition-colors ${
+                        testConfig.selection.kind === m
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'hover:bg-slate-200 dark:hover:bg-slate-600'
+                      }`}
+                    >
+                      {m === 'preset' ? 'Preset' : m === 'range' ? 'Rentang' : 'Grup Tunggal'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* range */}
+              {testConfig.selection.kind === 'range' && (
+                <div className="md:col-span-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <select
+                      value={testConfig.selection.value.from}
+                      onChange={e => handleTestConfigChange('selectionFrom', e.target.value)}
+                      className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    <span className="font-semibold text-slate-500">→</span>
+                    <select
+                      value={testConfig.selection.value.to}
+                      onChange={e => handleTestConfigChange('selectionTo', e.target.value)}
+                      className="flex-1 rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                  <p className="text-xs text-slate-500">Jika “Dari” lebih besar dari “Sampai”, sistem menukar otomatis.</p>
+                </div>
+              )}
+
+              {/* single */}
+              {testConfig.selection.kind === 'single' && (
+                <div className="md:col-span-2">
+                  <div className="mb-1">
+                    <select
+                      onChange={e => {
+                        const selectedGroup = KANA_GROUPS.find(g => g.key === e.target.value);
+                        if (selectedGroup) {
+                          handleTestConfigChange('selectionTokens', selectedGroup.label.split(' '));
+                        }
+                      }}
+                      className="w-full rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Pilih grup...</option>
+                      {groupOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Selected count pill */}
+              <div className="md:col-span-1">
+                <div className="h-10 px-3 inline-flex items-center rounded-full bg-slate-200 dark:bg-slate-700 text-sm font-medium">
+                  Dipilih: {previewCount} huruf
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Challenge */}
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-4 flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={testConfig.challenge.enabled}
+                onChange={e => handleTestConfigChange('enabled', e.target.checked)}
+                className="rounded text-blue-600"
+              />
+              <span className="font-medium">Challenge Mode</span>
+            </label>
+
+            {testConfig.challenge.enabled && (
+              <select
+                value={testConfig.challenge.durationSec / 60}
+                onChange={e => handleTestConfigChange('durationSec', parseInt(e.target.value, 10) * 60)}
+                className="rounded-lg bg-slate-100 dark:bg-slate-700 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value={1}>1 menit</option>
+                <option value={3}>3 menit</option>
+                <option value={5}>5 menit</option>
+                <option value={10}>10 menit</option>
+              </select>
+            )}
+          </div>
+        </div>
+
+        {/* Sticky action area */}
+        <div className="sticky bottom-0 inset-x-0">
+          <div className="pointer-events-none h-6 bg-gradient-to-t from-slate-100/80 dark:from-slate-900/80 to-transparent" />
+          <div className="p-4 md:p-6">
+            <button
+              onClick={startTestHandler}
+              id="btnStart"
+              disabled={startButtonDisabled}
+              title="Enter: cek • →: lewati"
+              className={`w-full font-bold py-3 rounded-lg shadow-md transition-all ${
+                startButtonDisabled
+                  ? 'bg-slate-400 dark:bg-slate-600 text-white cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Mulai Tes
+            </button>
+            {startButtonDisabled && (
+              <p className="text-center text-red-500 mt-2 text-sm">
+                Pilih rentang/daftar yang valid atau turunkan jumlah soal.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 };
 
-// Fungsi untuk membangun bank soal dari selection
-const buildKanaBank = (cfg: TestConfig) => {
-    const { keys } = resolveSelection(cfg.selection);
-    const items = KANA_ORDER.filter(x => keys.includes(x.key));
-    const pickChar = (x: typeof KANA_ORDER[number]) =>
-        cfg.script === "hiragana" ? x.hira : cfg.script === "katakana" ? x.kata : [x.hira, x.kata][Math.random() < .5 ? 0 : 1];
 
-    return items.map(x => ({
-        romaji: x.key,
-        kana: pickChar(x)
-    }));
-};
+// Component for Test Configuration Panel
+interface TestConfigPanelProps {
+    testConfig: TestConfig;
+    setTestConfig: React.Dispatch<React.SetStateAction<TestConfig>>;
+    previewCount: number;
+    invalidTokens: string[];
+    startTestHandler: () => void;
+    startButtonDisabled: boolean;
+    openCustomSetModal: () => void;
+}
 
-const App = () => {
-    const [currentView, setCurrentView] = useState('kana');
-    const [testSet, setTestSet] = useState<'hiragana' | 'katakana' | 'both' | 'kanji'>('both');
-    const [qType, setQType] = useState('k2r');
-    const [answerMode, setAnswerMode] = useState('type');
-    const [testCount, setTestCount] = useState(25);
-    const [sylPerItem, setSylPerItem] = useState(3);
-    const [challengeMode, setChallengeMode] = useState(false);
-    const [duration, setDuration] = useState(3);
-    const [selectionMode, setSelectionMode] = useState<SelectionMode>("range");
-    const [rangeFrom, setRangeFrom] = useState('a');
-    const [rangeTo, setRangeTo] = useState('n');
-    const [singleGroup, setSingleGroup] = useState('a i u e o');
-    const [selection, setSelection] = useState<Selection>({ kind: "range", value: { from: 'a', to: 'n' } });
+// Main App Component
+const App: React.FC = () => {
+    const [testConfig, setTestConfig] = useState<TestConfig>(() => {
+        try {
+            const storedConfig = localStorage.getItem('kanaTrainer_testConfig');
+            if (storedConfig) {
+                const parsed = JSON.parse(storedConfig);
+                const merged = { ...initialTestConfig, ...parsed, challenge: { ...initialTestConfig.challenge, ...parsed.challenge } };
+                // Also restore selection details
+                if (merged.selection.kind === 'range') {
+                    merged.selection.value.from = localStorage.getItem('kanaTrainer_rangeFrom') || merged.selection.value.from;
+                    merged.selection.value.to = localStorage.getItem('kanaTrainer_rangeTo') || merged.selection.value.to;
+                } else if (merged.selection.kind === 'single') {
+                    const savedTokens = localStorage.getItem('kanaTrainer_singleTokens');
+                    if (savedTokens) merged.selection.value.tokens = JSON.parse(savedTokens);
+                } else if (merged.selection.kind === 'preset') {
+                    merged.selection.value.preset = (localStorage.getItem('kanaTrainer_preset') || 'all') as PresetSelectionValue;
+                    // Restore customSet separately
+                    const savedCustomSet = JSON.parse(localStorage.getItem('kanaTrainer_customSet') || '{}');
+                    merged.selection.value.customSet = savedCustomSet[merged.script];
+                }
+                return merged;
+            }
+            return initialTestConfig;
+        } catch (error) {
+            console.error("Failed to load test config from localStorage", error);
+            return initialTestConfig;
+        }
+    });
 
     const [isTestActive, setIsTestActive] = useState(false);
     const [isTestFinished, setIsTestFinished] = useState(false);
-    const [testItems, setTestItems] = useState<any[]>([]);
+    const [testItems, setTestItems] = useState<any[]>([]); // Array of { qItem: KanaItem, options?: string[] }
     const [currentItemIndex, setCurrentItemIndex] = useState(0);
     const [userAnswer, setUserAnswer] = useState('');
     const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null);
@@ -235,125 +868,231 @@ const App = () => {
     const [timeLeft, setTimeLeft] = useState(0);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const answerInputRef = useRef<HTMLInputElement>(null);
+    const [showToast, setShowToast] = useState<{ message: string; type?: 'info' | 'warn' } | null>(null);
+    const [toastKey, setToastKey] = useState(0);
+    const [isCustomSetModalOpen, setIsCustomSetModalOpen] = useState(false);
 
-    const isTypingMode = answerMode === 'type';
-    const isListeningType = qType.includes('audio');
-    const isKanjiTest = testSet === 'kanji';
+    const isTypingMode = testConfig.mode === 'typing';
+    const isListeningType = testConfig.direction.includes('audio');
 
-    const currentKanaBank = buildKanaBank({
-        domain: "kana",
-        script: testSet === 'hiragana' || testSet === 'katakana' ? testSet : 'both',
-        direction: "kana-to-romaji",
-        mode: "typing",
-        count: 0,
-        selection: selection,
-        challenge: { enabled: false, durationSec: 60 },
-        createdAt: new Date().toISOString()
-    });
+    const { keys: resolvedKeys, invalidTokens, rangeLabel: currentRangeLabel } = useMemo(() => resolveSelection(testConfig.selection), [testConfig.selection]);
+    const currentKanaBank = useMemo(() => buildKanaBank(testConfig), [testConfig, resolvedKeys]);
     const previewCount = currentKanaBank.length;
-    const invalidTokens = selectionMode === "single" ? resolveSelection(selection).invalidTokens : [];
-    const startButtonDisabled = previewCount === 0 || testCount > previewCount * 4;
-
-    useEffect(() => {
-        if (isTestActive && challengeMode) {
-            timerRef.current = setTimeout(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        finishTest();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
+    
+    const startButtonDisabled = useMemo(() => {
+        if (testConfig.selection.value.preset === 'custom' && (!testConfig.selection.value.customSet || testConfig.selection.value.customSet.length === 0)) {
+            return true;
         }
-        return () => clearTimeout(timerRef.current as ReturnType<typeof setTimeout>);
-    }, [isTestActive, challengeMode, timeLeft]);
+        return previewCount === 0 || testConfig.count <= 0 || testConfig.count > previewCount * 4;
+    }, [previewCount, testConfig.count, testConfig.selection.value.preset, testConfig.selection.value.customSet]);
 
-    useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            if (!isTestActive || isTestFinished) return;
-            if (e.key === 'Enter') {
-                if (answerMode === 'type') {
-                    handleCheck();
-                }
-            } else if (e.key === 'ArrowRight') {
-                handleSkip();
-            } else if (e.key.toLowerCase() === 'r' && (qType === 'audio_k2r' || qType === 'audio_r2k')) {
-                const currentQuestion = testItems[currentItemIndex];
-                if (currentQuestion) {
-                    playAudio(currentQuestion.qItem.char);
-                }
-            }
-        };
 
-        window.addEventListener('keydown', handleKeyPress);
-        return () => {
-            window.removeEventListener('keydown', handleKeyPress);
-        };
-    }, [isTestActive, isTestFinished, answerMode, qType, currentItemIndex, testItems]);
-
-    useEffect(() => {
-        if (isTestActive && answerInputRef.current && answerMode === 'type') {
-            answerInputRef.current.focus();
-        }
-    }, [currentItemIndex, isTestActive, answerMode]);
-
-    useEffect(() => {
-        const storedSelection = localStorage.getItem('test.selection');
-        if (storedSelection) {
-            const parsedSelection = JSON.parse(storedSelection);
-            if (parsedSelection.kind === "range") {
-                setSelectionMode("range");
-                setRangeFrom(parsedSelection.value.from);
-                setRangeTo(parsedSelection.value.to);
-            } else if (parsedSelection.kind === "single") {
-                setSelectionMode("single");
-                setSingleGroup(parsedSelection.value.join(' '));
-            }
-            setSelection(parsedSelection);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!isTestActive) {
-            const newSelection = selectionMode === "range"
-                ? { kind: "range", value: { from: rangeFrom, to: rangeTo } }
-                : { kind: "single", value: singleGroup.split(" ") };
-            setSelection(newSelection as Selection);
-            localStorage.setItem('test.selection', JSON.stringify(newSelection));
-        }
-    }, [selectionMode, rangeFrom, rangeTo, singleGroup, isTestActive]);
-
-    const playAudio = (text: string, lang = 'ja-JP') => {
+    // --- Audio Functions ---
+    const playAudio = useCallback((text: string, lang = 'ja-JP') => {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.cancel();
             window.speechSynthesis.speak(utterance);
         } else {
             console.error('Browser Anda tidak mendukung text-to-speech.');
         }
+    }, []);
+
+    const playCurrentQuestionAudio = useCallback(() => {
+        const currentTestItem = testItems[currentItemIndex];
+        if (!currentTestItem) return;
+
+        let textToSpeak = (testConfig.direction.includes('romaji-to-kana') || testConfig.direction === 'romaji-to-kana') 
+            ? (currentTestItem.qItem as KanaItem).romaji
+            : (currentTestItem.qItem as KanaItem).char;
+        
+        playAudio(textToSpeak, 'ja-JP');
+    }, [currentItemIndex, testConfig.direction, playAudio, testItems]);
+
+    // --- Test Logic ---
+    const normalizeRomajiForComparison = (romaji: string) => {
+        let normalized = romaji.toLowerCase();
+        normalized = normalized.replace(/wo/g, 'o');
+        normalized = normalized.replace(/ji|di/g, 'dji');
+        normalized = normalized.replace(/zu|du/g, 'dzu');
+        return normalized;
     };
+    
+    const getDecoys = (correctAnswer: string, allPossibleAnswers: string[], count: number): string[] => {
+        const decoys: string[] = [];
+        const filteredAnswers = allPossibleAnswers.filter(ans => normalize(ans) !== normalize(correctAnswer));
+        const shuffled = shuffleArray([...filteredAnswers]);
+        for (let i = 0; i < count && i < shuffled.length; i++) {
+            decoys.push(shuffled[i]);
+        }
+        return decoys;
+    };
+    
+    const generateMCQOptions = useCallback((correctItem: KanaItem, config: TestConfig, bank: KanaItem[]): string[] => {
+        let correctValue: string;
+        let allPossibleAnswers: string[];
+        
+        if (config.direction === 'kana-to-romaji' || config.direction === 'audio-kana-to-romaji') {
+            correctValue = (correctItem as KanaItem).romaji;
+            allPossibleAnswers = bank.map(item => item.romaji);
+        } else { // romaji-to-kana, audio-romaji-to-kana
+            correctValue = (correctItem as KanaItem).char;
+            allPossibleAnswers = bank.map(item => item.char);
+        }
 
-    const generateTestItems = () => {
-        const testConfig: TestConfig = {
-            domain: "kana",
-            script: testSet === 'hiragana' || testSet === 'katakana' ? testSet : 'both',
-            direction: "kana-to-romaji", // unused for now
-            mode: "typing", // unused for now
-            count: testCount,
-            selection: selection,
-            challenge: { enabled: challengeMode, durationSec: duration * 60 },
-            createdAt: new Date().toISOString()
-        };
+        const decoys = getDecoys(correctValue, allPossibleAnswers, 3);
+        let options = shuffleArray([correctValue, ...decoys]);
 
-        const bank = buildKanaBank(testConfig);
+        while (options.length < 4 && allPossibleAnswers.length > options.length) {
+            const potentialPad = shuffleArray(allPossibleAnswers.filter(ans => !options.includes(ans)))[0];
+            if (potentialPad) {
+                options.push(potentialPad);
+            } else {
+                break;
+            }
+        }
+        return shuffleArray(options.slice(0, 4));
+    }, []);
+    
+    const finishTest = useCallback(() => {
+        setIsTestActive(false);
+        setIsTestFinished(true);
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    }, []);
+
+    const handleAnswer = useCallback((answer: string) => {
+        const currentTestItem = testItems[currentItemIndex];
+        if (!currentTestItem) return;
+
+        let isCorrect = false;
+        let correctAnswer: string = '';
+        let userProvided: string = normalize(answer);
+
+        const kanaItem = currentTestItem.qItem as KanaItem;
+        
+        if (testConfig.direction === 'kana-to-romaji' || testConfig.direction === 'audio-kana-to-romaji') {
+            correctAnswer = kanaItem.romaji;
+            // Handle dji/dzu aliases like in index.html
+            const canonCorrect = normalizeRomajiForComparison(correctAnswer);
+            const canonUser = normalizeRomajiForComparison(userProvided);
+            isCorrect = canonUser === canonCorrect;
+        } else if (testConfig.direction === 'romaji-to-kana' || testConfig.direction === 'audio-romaji-to-kana') {
+            correctAnswer = kanaItem.char;
+            const userKana = romajiStringToKana(userProvided, testConfig.script);
+            isCorrect = userKana === correctAnswer;
+        }
+
+        setIsAnswerCorrect(isCorrect);
+        
+        let feedbackMessage: string;
+        let toastType: 'info' | 'warn';
+
+        if (isCorrect) {
+            setCorrectCount(prev => prev + 1);
+            setStreak(prev => prev + 1);
+            toastType = 'info';
+            feedbackMessage = `Benar! ${kanaItem.char} = ${correctAnswer}`;
+        } else {
+            setIncorrectCount(prev => prev + 1);
+            setStreak(0);
+            setIncorrectlyAnswered(prev => {
+                const itemToAdd = { char: kanaItem.char, romaji: kanaItem.romaji };
+                if (!prev.some(item => (item as KanaItem).char === (itemToAdd as KanaItem).char)) {
+                    return [...prev, itemToAdd];
+                }
+                return prev;
+            });
+            toastType = 'warn';
+            feedbackMessage = `Salah. ${kanaItem.char} dibaca ${correctAnswer}. Jawabanmu: ${answer}.`;
+        }
+
+        setShowToast({ message: feedbackMessage, type: toastType });
+        setToastKey(prev => prev + 1);
+
+        setTimeout(() => {
+            if (currentItemIndex + 1 >= testConfig.count) {
+                finishTest();
+            } else {
+                setCurrentItemIndex(prev => prev + 1);
+                setUserAnswer('');
+                setIsAnswerCorrect(null);
+                 if (testConfig.direction.includes('audio')) {
+                    setTimeout(() => playCurrentQuestionAudio(), 100);
+                }
+            }
+        }, 500);
+    }, [testItems, currentItemIndex, testConfig, finishTest, playCurrentQuestionAudio]);
+
+    const handleCheck = useCallback(() => {
+        if (!userAnswer.trim()) return;
+        handleAnswer(userAnswer);
+    }, [userAnswer, handleAnswer]);
+
+    const handleSkip = useCallback(() => {
+        setIncorrectCount(prev => prev + 1);
+        setStreak(0);
+        const currentTestItem = testItems[currentItemIndex];
+        if (currentTestItem) {
+            setIncorrectlyAnswered(prev => {
+                const itemToAdd = { char: (currentTestItem.qItem as KanaItem).char, romaji: (currentTestItem.qItem as KanaItem).romaji };
+                if (!prev.some(item => (item as KanaItem).char === (itemToAdd as KanaItem).char)) {
+                    return [...prev, itemToAdd];
+                }
+                return prev;
+            });
+        }
+        setShowToast({ message: 'Oke, kita lanjut dulu.', type: 'info' });
+
+        setTimeout(() => {
+            if (currentItemIndex + 1 >= testConfig.count) {
+                finishTest();
+            } else {
+                setCurrentItemIndex(prev => prev + 1);
+                setUserAnswer('');
+                setIsAnswerCorrect(null);
+                 if (testConfig.direction.includes('audio')) {
+                    setTimeout(() => playCurrentQuestionAudio(), 100);
+                }
+            }
+        }, 500);
+    }, [testItems, currentItemIndex, testConfig.count, finishTest, testConfig.direction, playCurrentQuestionAudio]);
+    
+    const handleMCQOptionClick = useCallback((option: string) => {
+        handleAnswer(option);
+    }, [handleAnswer]);
+    
+    const restartTest = useCallback(() => {
+        setIsTestFinished(false);
+        setIsTestActive(false);
+        setTestItems([]);
+        setCurrentItemIndex(0);
+        setCorrectCount(0);
+        setIncorrectCount(0);
+        setStreak(0);
+        setIncorrectlyAnswered([]);
+        setUserAnswer('');
+        setIsAnswerCorrect(null);
+    }, []);
+    
+    const generateTestItems = useCallback(() => {
         const items = [];
+        const bank = currentKanaBank;
+        if (bank.length === 0) return;
+
         for (let i = 0; i < testConfig.count; i++) {
-            let qItem: any, options: string[] = [];
-            
-            // Dapatkan item pertanyaan acak dari bank
+            let qItem: KanaItem;
+            let options: string[] | undefined;
             qItem = bank[Math.floor(Math.random() * bank.length)];
-            
+
+            if (testConfig.mode === 'mcq') {
+                options = generateMCQOptions(qItem, testConfig, bank);
+            }
             items.push({ qItem, options });
         }
         setTestItems(items);
@@ -364,104 +1103,148 @@ const App = () => {
         setIncorrectCount(0);
         setStreak(0);
         setIncorrectlyAnswered([]);
-    };
-
-    const startTest = () => {
+    }, [testConfig, currentKanaBank, generateMCQOptions]);
+    
+    const startTestHandler = useCallback(() => {
         generateTestItems();
         setIsTestActive(true);
         setIsTestFinished(false);
-        if (challengeMode) {
-            setTimeLeft(duration * 60);
+        if (testConfig.challenge.enabled) {
+            setTimeLeft(testConfig.challenge.durationSec);
         }
-        window.dispatchEvent(new CustomEvent("test:start", { detail: { 
-            domain: "kana",
-            script: testSet,
-            count: testCount,
-            selection: selection,
-            challenge: { enabled: challengeMode, durationSec: duration * 60 },
-            createdAt: new Date().toISOString()
-        } }));
-    };
+        window.dispatchEvent(new CustomEvent("test:start", { detail: testConfig }));
+        // Play audio for the first question if it's a listening type
+        if (testConfig.direction.includes('audio')) {
+            setTimeout(() => playCurrentQuestionAudio(), 100);
+        }
+    }, [generateTestItems, testConfig, playCurrentQuestionAudio]);
 
-    const handleAnswer = (answer: string) => {
-        const currentItem = testItems[currentItemIndex];
-        const isKanjiTest = testSet === 'kanji';
-        const correctAnswer = isKanjiTest ? (currentItem.qItem as KanjiItem).meaning : (currentItem.qItem as KanaItem).romaji;
-        const isCorrect = answer.trim().toLowerCase() === correctAnswer.toLowerCase();
-        setIsAnswerCorrect(isCorrect);
+    const handleCustomSetSave = useCallback((selectedKeys: string[]) => {
+        const savedCustomSets = JSON.parse(localStorage.getItem('kanaTrainer_customSet') || '{}');
+        savedCustomSets[testConfig.script] = selectedKeys;
+        localStorage.setItem('kanaTrainer_customSet', JSON.stringify(savedCustomSets));
+        setTestConfig(prev => ({
+            ...prev,
+            selection: {
+                kind: 'preset',
+                value: {
+                    preset: 'custom',
+                    customSet: selectedKeys,
+                },
+            },
+        }));
+        setShowToast({ message: `Set kustom (${selectedKeys.length} huruf) berhasil disimpan.`, type: 'info' });
+    }, [testConfig.script, setTestConfig]);
 
-        if (isCorrect) {
-            setCorrectCount(prev => prev + 1);
-            setStreak(prev => prev + 1);
-        } else {
-            setIncorrectCount(prev => prev + 1);
-            setStreak(0);
-            setIncorrectlyAnswered(prev => {
-                const itemToAdd = isKanjiTest ? currentItem.qItem : { char: (currentItem.qItem as KanaItem).char, romaji: (currentItem.qItem as KanaItem).romaji };
-                if (!prev.find(item => item.character === itemToAdd.character || item.char === itemToAdd.char)) {
-                    return [...prev, itemToAdd];
+
+    // --- Effects ---
+
+    // Persist testConfig to localStorage
+    useEffect(() => {
+        localStorage.setItem('kanaTrainer_testConfig', JSON.stringify(testConfig));
+    }, [testConfig]);
+
+    // Challenge Mode Timer
+    useEffect(() => {
+        if (isTestActive && testConfig.challenge.enabled) {
+            timerRef.current = setInterval(() => {
+                setTimeLeft(prev => {
+                    const newTime = prev - 1;
+                    if (newTime <= 0) {
+                        clearInterval(timerRef.current as ReturnType<typeof setTimeout>);
+                        finishTest();
+                        return 0;
+                    }
+                    return newTime;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(timerRef.current as ReturnType<typeof setTimeout>);
+    }, [isTestActive, testConfig.challenge.enabled, finishTest]);
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            if (!isTestActive || isTestFinished) return;
+            const activeElementTagName = document.activeElement?.tagName.toLowerCase();
+            const isInputFocused = activeElementTagName === 'input' || activeElementTagName === 'textarea';
+
+            if (e.key === 'Enter') {
+                if (isTypingMode) {
+                    e.preventDefault();
+                    handleCheck();
                 }
-                return prev;
-            });
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                handleSkip();
+            } else if (e.key.toLowerCase() === 'r') {
+                e.preventDefault();
+                playCurrentQuestionAudio();
+            } else if (!isTypingMode && !isInputFocused) { // MCQ hotkeys
+                const keyMap: { [key: string]: number } = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+                const optionIndex = keyMap[e.key.toLowerCase()];
+                const currentTestItem = testItems[currentItemIndex];
+                if (optionIndex !== undefined && currentTestItem && currentTestItem.options?.[optionIndex]) {
+                    handleMCQOptionClick(currentTestItem.options[optionIndex]);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+        };
+    }, [isTestActive, isTestFinished, isTypingMode, userAnswer, handleCheck, handleSkip, playCurrentQuestionAudio, testItems, currentItemIndex, handleMCQOptionClick]);
+
+    // Auto-focus input
+    useEffect(() => {
+        if (isTestActive && isTypingMode && answerInputRef.current) {
+            answerInputRef.current.focus();
         }
+    }, [currentItemIndex, isTestActive, isTypingMode]);
 
-        setTimeout(() => {
-            if (currentItemIndex + 1 >= testCount) {
-                finishTest();
-            } else {
-                setCurrentItemIndex(prev => prev + 1);
-                setUserAnswer('');
-                setIsAnswerCorrect(null);
-            }
-        }, 500);
-    };
+    // Input Discipline for Romaji
+    const handleTypingInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value;
+        if (testConfig.direction.includes('romaji')) {
+            value = value.replace(/[ぁ-んァ-ンー゛゜]/g, '');
+        }
+        setUserAnswer(value);
+    }, [testConfig.direction]);
 
-    const handleCheck = () => {
-        if (!userAnswer.trim()) return;
-        handleAnswer(userAnswer);
-    };
-
-    const handleSkip = () => {
-        setIncorrectCount(prev => prev + 1);
-        setStreak(0);
-        setIncorrectlyAnswered(prev => {
-            const currentItem = testItems[currentItemIndex];
-            const isKanjiTest = testSet === 'kanji';
-            const itemToAdd = isKanjiTest ? currentItem.qItem : { char: (currentItem.qItem as KanaItem).char, romaji: (currentItem.qItem as KanaItem).romaji };
-            if (!prev.find(item => item.character === itemToAdd.character || item.char === itemToAdd.char)) {
-                return [...prev, itemToAdd];
-            }
-            return prev;
-        });
-
-        if (currentItemIndex + 1 >= testCount) {
-                finishTest();
-            } else {
-                setCurrentItemIndex(prev => prev + 1);
-                setUserAnswer('');
-                setIsAnswerCorrect(null);
-            }
-    };
-
-    const finishTest = () => {
-        setIsTestActive(false);
-        setIsTestFinished(true);
-        clearTimeout(timerRef.current as ReturnType<typeof setTimeout>);
-    };
-
-    const restartTest = () => {
-        setIsTestFinished(false);
-        setIsTestActive(false);
-    };
-
+    // --- Display Calculations ---
     const formatTime = (seconds: number) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
     };
 
-    const progressBarWidth = testCount > 0 ? (currentItemIndex / testCount) * 100 : 0;
-    const currentQuestion = testItems[currentItemIndex];
+    const progressBarWidth = testConfig.count > 0 ? (currentItemIndex / testConfig.count) * 100 : 0;
+    const currentTestItem = testItems[currentItemIndex];
+
+    const currentTestInfo = useMemo(() => {
+        const scriptLabel = {
+            'hiragana': 'Hiragana',
+            'katakana': 'Katakana',
+            'both': 'Hira & Kata',
+        }[testConfig.script];
+
+        const directionLabel = {
+            'kana-to-romaji': 'Kana → Romaji',
+            'romaji-to-kana': 'Romaji → Kana',
+            'audio-kana-to-romaji': 'Listening (K → R)',
+            'audio-romaji-to-kana': 'Listening (R → K)',
+        }[testConfig.direction];
+
+        return `${scriptLabel} • ${currentRangeLabel} • ${directionLabel} • Soal ${currentItemIndex + 1}/${testConfig.count}`;
+    }, [testConfig.script, testConfig.direction, currentRangeLabel, currentItemIndex, testConfig.count]);
+
+    // Toast for streak
+    useEffect(() => {
+        if (streak > 0 && streak % 10 === 0) {
+            setShowToast({ message: `Wii! Keren banget! ✨ — ${streak} jawaban benar berturut-turut.`, type: 'info' });
+            setToastKey(prev => prev + 1);
+        }
+    }, [streak]);
 
     return (
         <div className="p-6 font-sans antialiased bg-slate-100 dark:bg-slate-900 min-h-screen text-slate-800 dark:text-slate-200">
@@ -480,30 +1263,8 @@ const App = () => {
                 @media (min-width: 640px) { .row.center { flex-direction: row; justify-content: center; } }
             `}</style>
             <div className="max-w-4xl mx-auto space-y-6">
-                {/* Navigation Buttons */}
-                <div className="flex justify-center gap-4 mb-6">
-                    <button
-                        onClick={() => { setCurrentView('kana'); restartTest(); }}
-                        className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                            currentView === 'kana' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-400 dark:hover:bg-slate-600'
-                        }`}
-                    >
-                        Latihan Kana
-                    </button>
-                    <button
-                        onClick={() => setCurrentView('kanji')}
-                        className={`px-6 py-2 rounded-full font-semibold transition-colors ${
-                            currentView === 'kanji' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-400 dark:hover:bg-slate-600'
-                        }`}
-                    >
-                        Belajar Kanji
-                    </button>
-                </div>
-
                 {/* Conditional Rendering */}
-                {currentView === 'kanji' ? (
-                    <KanjiLearn />
-                ) : !isTestActive ? (
+                {!isTestActive ? (
                     isTestFinished ? (
                         <div className="flex flex-col items-center justify-center p-6">
                             <div className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 text-center">
@@ -524,8 +1285,8 @@ const App = () => {
                                         <h3 className="text-xl font-semibold mb-3">Latihan lagi untuk ini:</h3>
                                         <div className="flex flex-wrap gap-2 justify-center">
                                             {incorrectlyAnswered.map(item => (
-                                                <div key={item.char || item.character} className="px-3 py-1 bg-slate-200 dark:bg-slate-700 rounded-full text-sm font-medium">
-                                                    {item.character || item.char} ({item.romaji || item.meaning})
+                                                <div key={(item as KanaItem).char} className="px-3 py-1 bg-slate-200 dark:bg-slate-700 rounded-full text-sm font-medium">
+                                                    {(item as KanaItem).char} ({ (item as KanaItem).romaji })
                                                 </div>
                                             ))}
                                         </div>
@@ -537,113 +1298,28 @@ const App = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="max-w-4xl mx-auto space-y-6">
-                            <h2 className="text-3xl font-bold">Latihan Hiragana & Katakana</h2>
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div className="flex flex-col">
-                                        <label htmlFor="testSet" className="font-semibold mb-1">Set:</label>
-                                        <select id="testSet" value={testSet} onChange={e => setTestSet(e.target.value as 'hiragana' | 'katakana' | 'both' | 'kanji')}
-                                            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
-                                            <option value="hiragana">Hiragana</option>
-                                            <option value="katakana">Katakana</option>
-                                            <option value="both">Keduanya</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <label htmlFor="qType" className="font-semibold mb-1">Tipe Soal:</label>
-                                        <select id="qType" value={qType} onChange={e => setQType(e.target.value)}
-                                            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700" disabled={testSet === 'kanji'}>
-                                            <option value="k2r">Kana → Romaji</option>
-                                            <option value="r2k">Romaji → Kana</option>
-                                            <option value="seq">Rangkaian Romaji → Kana</option>
-                                            <option value="audio_k2r">Listening (Kana → Romaji)</option>
-                                            <option value="audio_r2k">Listening (Romaji → Kana)</option>
-                                            <option value="kseq">Kana Sequence (Ketik Romaji)</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <label htmlFor="answerMode" className="font-semibold mb-1">Mode Jawaban:</label>
-                                        <select id="answerMode" value={answerMode} onChange={e => setAnswerMode(e.target.value)}
-                                            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
-                                            <option value="type">Ketik</option>
-                                            <option value="mc">Pilihan Ganda</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <label htmlFor="testCount" className="font-semibold mb-1">Jumlah Soal:</label>
-                                        <input id="testCount" type="number" min="1" value={testCount} onChange={e => setTestCount(parseInt(e.target.value))}
-                                            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700" />
-                                        <div className="flex gap-2 mt-2">
-                                            {[10, 25, 50, 100].map(count => (
-                                                <button key={count} onClick={() => setTestCount(count)}
-                                                    className="px-3 py-1 text-sm rounded-full bg-slate-200 dark:bg-slate-700">
-                                                    {count}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                                    <div className="flex flex-col">
-                                        <label htmlFor="selectionMode" className="font-semibold mb-2">Pilih mode:</label>
-                                        <div className="flex rounded-lg bg-slate-100 dark:bg-slate-700 p-1">
-                                            <button onClick={() => setSelectionMode('range')} className={`flex-1 py-2 rounded-lg font-medium transition-colors ${selectionMode === 'range' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Rentang</button>
-                                            <button onClick={() => setSelectionMode('single')} className={`flex-1 py-2 rounded-lg font-medium transition-colors ${selectionMode === 'single' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-slate-200 dark:hover:bg-slate-600'}`}>Grup Tunggal</button>
-                                        </div>
-                                    </div>
-                                    {selectionMode === 'range' ? (
-                                        <div className="flex flex-col">
-                                            <div className="flex gap-2 items-center mb-1">
-                                                <input type="text" value={rangeFrom} onChange={e => setRangeFrom(e.target.value)} placeholder="Dari (contoh: a)" className="flex-1 p-2 rounded-lg bg-slate-100 dark:bg-slate-700 placeholder-slate-400" />
-                                                <span className="font-semibold text-slate-500">→</span>
-                                                <input type="text" value={rangeTo} onChange={e => setRangeTo(e.target.value)} placeholder="Sampai (contoh: m)" className="flex-1 p-2 rounded-lg bg-slate-100 dark:bg-slate-700 placeholder-slate-400" />
-                                            </div>
-                                            <p className="text-sm text-slate-500 italic">Jika 'Dari' &gt; 'Sampai', sistem akan menukar otomatis.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col">
-                                            <input type="text" value={singleGroup} onChange={e => setSingleGroup(e.target.value)} placeholder="a i u e o" className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 placeholder-slate-400 mb-1" />
-                                            <p className="text-sm text-slate-500 italic">Pisahkan dengan spasi. Contoh: a ka sa shi kyo.</p>
-                                            {invalidTokens.length > 0 && (
-                                                <p className="text-xs text-red-500 mt-1">
-                                                    Beberapa token diabaikan karena tidak dikenali: {invalidTokens.slice(0, 3).join(', ')}{invalidTokens.length > 3 ? '...' : ''}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div className="flex items-center justify-center p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-sm font-medium">
-                                        Dipilih: {previewCount} huruf
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 mt-4">
-                                    <input type="checkbox" id="challengeMode" checked={challengeMode} onChange={e => setChallengeMode(e.target.checked)} className="rounded text-blue-600" />
-                                    <label htmlFor="challengeMode" className="font-semibold">Challenge Mode</label>
-                                    {challengeMode && (
-                                        <select value={duration} onChange={e => setDuration(parseInt(e.target.value))} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
-                                            <option value={1}>1 menit</option>
-                                            <option value={3}>3 menit</option>
-                                            <option value={5}>5 menit</option>
-                                            <option value={10}>10 menit</option>
-                                        </select>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={startTest}
-                                    id="btnStart"
-                                    className={`w-full font-bold py-3 rounded-lg shadow-md transition-all mt-4 ${startButtonDisabled ? 'bg-slate-400 dark:bg-slate-600 text-white cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-                                    title="Tekan Enter untuk memeriksa jawaban, → untuk melewati"
-                                    disabled={startButtonDisabled}
-                                >
-                                    Mulai Tes
-                                </button>
-                                {startButtonDisabled && (
-                                    <p className="text-center text-red-500 mt-2">
-                                        Pilih rentang/daftar yang valid atau atur jumlah soal lebih rendah.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
+                        <>
+                            <TestConfigPanel
+                                testConfig={testConfig}
+                                setTestConfig={setTestConfig}
+                                previewCount={previewCount}
+                                invalidTokens={invalidTokens}
+                                startTestHandler={startTestHandler}
+                                startButtonDisabled={startButtonDisabled}
+                                openCustomSetModal={() => setIsCustomSetModalOpen(true)}
+                            />
+                            {isCustomSetModalOpen && (
+                                <CustomSetModal
+                                    onClose={() => setIsCustomSetModalOpen(false)}
+                                    onSave={handleCustomSetSave}
+                                    initialSet={testConfig.script}
+                                    initialCustomSet={{
+                                        hiragana: testConfig.selection.value.customSet || [],
+                                        katakana: testConfig.selection.value.customSet || [],
+                                    }}
+                                />
+                            )}
+                        </>
                     )
                 ) : (
                     // In-test UI
@@ -653,35 +1329,31 @@ const App = () => {
                         </div>
 
                         <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl text-center space-y-6">
-                            {challengeMode && (
-                                <p id="challengeTimeLeft" aria-live="polite" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                    Sisa: {formatTime(timeLeft)}
+                            {testConfig.challenge.enabled && (
+                                <p id="challengeTimeLeft" aria-live="polite" className="flex items-center justify-center gap-2 text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                    <Clock className="w-6 h-6" /> Sisa: {formatTime(timeLeft)}
                                 </p>
                             )}
 
-                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                Soal {currentItemIndex + 1} dari {testCount}
+                            <div id="testInfo" className="text-sm font-medium text-slate-500 dark:text-slate-400" aria-live="polite">
+                                <span id="testInfoText">{currentTestInfo}</span>
+                                <span id="streakCounter" className={`ml-4 font-semibold ${streak > 0 ? 'text-green-600' : 'text-slate-500'}`}>Streak: {streak}</span>
                             </div>
 
                             <div className="min-h-[10rem] flex flex-col items-center justify-center">
                                 {/* Prompt Area */}
-                                {isKanjiTest ? (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <p id="qKanji" className="text-9xl font-bold">{currentQuestion?.qItem?.character}</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col items-center gap-4">
-                                        <p id="qKana" className="text-9xl font-bold">{currentQuestion?.qItem?.char}</p>
-                                        {isListeningType && (
-                                            <button onClick={() => playAudio((currentQuestion?.qItem as KanaItem).char)} aria-label="Putar audio kembali" className="p-3 rounded-full bg-blue-100 dark:bg-blue-700 hover:bg-blue-200 dark:hover:bg-blue-600 transition-colors">
-                                                <Volume2 className="h-6 w-6 text-blue-600 dark:text-blue-200" />
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                                {(qType === 'seq' || qType === 'kseq') && (
-                                    <p id="qRomaji" className="text-5xl font-bold">{currentQuestion?.qItem?.romaji}</p>
-                                )}
+                                <div className="flex flex-col items-center gap-4">
+                                    <p id="qKana" className={`text-9xl font-bold
+                                        ${testConfig.direction === 'romaji-to-kana' || testConfig.direction === 'audio-romaji-to-kana' ? 'text-5xl' : ''}
+                                    `}>
+                                        {(currentTestItem?.qItem as KanaItem)?.char || (currentTestItem?.qItem as KanaItem)?.romaji}
+                                    </p>
+                                    {isListeningType && (
+                                        <button onClick={playCurrentQuestionAudio} aria-label="Putar audio kembali" className="p-3 rounded-full bg-blue-100 dark:bg-blue-700 hover:bg-blue-200 dark:hover:bg-blue-600 transition-colors">
+                                            <Volume2 className="h-6 w-6 text-blue-600 dark:text-blue-200" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Jawaban */}
@@ -691,29 +1363,33 @@ const App = () => {
                                         id="ans"
                                         type="text"
                                         value={userAnswer}
-                                        onChange={e => setUserAnswer(e.target.value)}
+                                        onChange={handleTypingInput}
                                         placeholder="Ketik jawaban di sini"
                                         ref={answerInputRef}
                                         className="w-full text-center text-2xl p-4 rounded-lg bg-slate-200 dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        autoCapitalize="none"
+                                        autoCorrect="off"
+                                        spellCheck="false"
                                     />
                                     <button id="btnCheck" onClick={handleCheck} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all">
                                         Periksa Jawaban
                                     </button>
                                 </div>
                             ) : (
-                                <div className="mc-grid">
-                                    {currentQuestion?.options.map((option: string) => (
+                                <div id="mcWrap" className="mc-grid">
+                                    {currentTestItem?.options?.map((option: string, index: number) => (
                                         <button
                                             key={option}
-                                            onClick={() => handleAnswer(option)}
+                                            onClick={() => handleMCQOptionClick(option)}
                                             className="mc-btn">
-                                            {option}
+                                            {String.fromCharCode(65 + index)}. {option}
                                         </button>
                                     ))}
+                                    <p className="text-sm text-slate-500 italic md:col-span-full">Ketuk atau tekan A/B/C/D</p>
                                 </div>
                             )}
 
-                            {/* Feedback dan Streak */}
+                            {/* Feedback */}
                             <div className="flex flex-col items-center gap-2">
                                 {isAnswerCorrect === true && (
                                     <div className="flex items-center text-green-600 font-semibold transition-transform duration-300 animate-pulse">
@@ -724,10 +1400,7 @@ const App = () => {
                                     <div className="flex items-center text-red-600 font-semibold transition-transform duration-300 animate-pulse">
                                         <XCircle className="h-5 w-5 mr-2" /> Salah.
                                     </div>
-                                )}
-                                <p className={`text-xl font-bold ${isAnswerCorrect ? 'text-green-600' : 'text-slate-500'}`}>
-                                    Streak: {streak}
-                                </p>
+                                )}{" "}
                             </div>
 
                             <div className="row center mt-6">
@@ -742,6 +1415,7 @@ const App = () => {
                     </div>
                 )}
             </div>
+            {showToast && <Toast key={toastKey} message={showToast.message} type={showToast.type} onDismiss={() => setShowToast(null)} />}
         </div>
     );
 };

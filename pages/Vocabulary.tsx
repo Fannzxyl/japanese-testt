@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Volume2 } from 'lucide-react';
 
-// In this one-file React app, we'll put all the data, components, and logic together.
-
 // This is the data for the vocabulary list.
 // In a real application, this would likely be fetched from an API or database.
 const vocabulary = [
+    // --- Topik: Dasar ---
     {
         id: 1,
         kanji: "私",
@@ -96,6 +95,8 @@ const vocabulary = [
         example: "おやすみなさい. (Oyasuminasai.)",
         topic: "Dasar"
     },
+    
+    // --- Topik: Kata Kerja ---
     {
         id: 11,
         kanji: "食べる",
@@ -186,6 +187,8 @@ const vocabulary = [
         example: "りんごを買います. (Ringo o kaimasu.)",
         topic: "Kata Kerja"
     },
+
+    // --- Topik: Kata Sifat ---
     {
         id: 21,
         kanji: "大きい",
@@ -231,53 +234,10 @@ const vocabulary = [
         example: "このケーキはおいしいです. (Kono kēki wa oishii desu.)",
         topic: "Kata Sifat"
     },
+    
+    // --- Topik: Benda ---
     {
         id: 26,
-        kanji: "まずい",
-        kana: "まずい",
-        romaji: "mazui",
-        meaning: "tidak enak",
-        example: "この料理はまずいです. (Kono ryōri wa mazui desu.)",
-        topic: "Kata Sifat"
-    },
-    {
-        id: 27,
-        kanji: "新しい",
-        kana: "あたらしい",
-        romaji: "atarashii",
-        meaning: "baru",
-        example: "新しい靴を買いました. (Atarashii kutsu o kaimashita.)",
-        topic: "Kata Sifat"
-    },
-    {
-        id: 28,
-        kanji: "古い",
-        kana: "ふるい",
-        romaji: "furui",
-        meaning: "lama / tua",
-        example: "古い本です. (Furui hon desu.)",
-        topic: "Kata Sifat"
-    },
-    {
-        id: 29,
-        kanji: "良い",
-        kana: "よい",
-        romaji: "yoi",
-        meaning: "baik",
-        example: "良い天気ですね. (Yoi tenki desu ne.)",
-        topic: "Kata Sifat"
-    },
-    {
-        id: 30,
-        kanji: "悪い",
-        kana: "わるい",
-        romaji: "warui",
-        meaning: "buruk",
-        example: "悪いニュースです. (Warui nyūsu desu.)",
-        topic: "Kata Sifat"
-    },
-    {
-        id: 31,
         kanji: "家",
         kana: "いえ",
         romaji: "ie",
@@ -286,7 +246,7 @@ const vocabulary = [
         topic: "Benda"
     },
     {
-        id: 32,
+        id: 27,
         kanji: "学校",
         kana: "がっこう",
         romaji: "gakkou",
@@ -295,7 +255,7 @@ const vocabulary = [
         topic: "Benda"
     },
     {
-        id: 33,
+        id: 28,
         kanji: "駅",
         kana: "えき",
         romaji: "eki",
@@ -304,7 +264,7 @@ const vocabulary = [
         topic: "Benda"
     },
     {
-        id: 34,
+        id: 29,
         kanji: "電車",
         kana: "でんしゃ",
         romaji: "densha",
@@ -313,7 +273,7 @@ const vocabulary = [
         topic: "Benda"
     },
     {
-        id: 35,
+        id: 30,
         kanji: "本",
         kana: "ほん",
         romaji: "hon",
@@ -321,116 +281,10 @@ const vocabulary = [
         example: "本を読みます. (Hon o yomimasu.)",
         topic: "Benda"
     },
+    
+    // --- Topik: Waktu ---
     {
-        id: 36,
-        kanji: "ペン",
-        kana: "ペン",
-        romaji: "pen",
-        meaning: "pulpen",
-        example: "ペンをください. (Pen o kudasai.)",
-        topic: "Benda"
-    },
-    {
-        id: 37,
-        kanji: "お金",
-        kana: "おかね",
-        romaji: "okane",
-        meaning: "uang",
-        example: "お金がありません. (Okane ga arimasen.)",
-        topic: "Benda"
-    },
-    {
-        id: 38,
-        kanji: "電話",
-        kana: "でんわ",
-        romaji: "denwa",
-        meaning: "telepon",
-        example: "電話をかけます. (Denwa o kakemasu.)",
-        topic: "Benda"
-    },
-    {
-        id: 39,
-        kanji: "パソコン",
-        kana: "パソコン",
-        romaji: "pasokon",
-        meaning: "komputer pribadi",
-        example: "パソコンを使います. (Pasokon o tsukaimasu.)",
-        topic: "Benda"
-    },
-    {
-        id: 40,
-        kanji: "時計",
-        kana: "とけい",
-        romaji: "tokei",
-        meaning: "jam / arloji",
-        example: "時計を見ます. (Tokei o mimasu.)",
-        topic: "Benda"
-    },
-    {
-        id: 41,
-        kanji: "月曜日",
-        kana: "げつようび",
-        romaji: "getsuyōbi",
-        meaning: "Senin",
-        example: "月曜日に会います. (Getsuyōbi ni aimasu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 42,
-        kanji: "火曜日",
-        kana: "かようび",
-        romaji: "kayōbi",
-        meaning: "Selasa",
-        example: "火曜日は休みです. (Kayōbi wa yasumi desu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 43,
-        kanji: "水曜日",
-        kana: "すいようび",
-        romaji: "suiyōbi",
-        meaning: "Rabu",
-        example: "水曜日に働きます. (Suiyōbi ni hatarakimasu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 44,
-        kanji: "木曜日",
-        kana: "もくようび",
-        romaji: "mokuyōbi",
-        meaning: "Kamis",
-        example: "木曜日に映画を見ます. (Mokuyōbi ni eiga o mimasu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 45,
-        kanji: "金曜日",
-        kana: "きんようび",
-        romaji: "kin'yōbi",
-        meaning: "Jumat",
-        example: "金曜日は忙しいです. (Kin'yōbi wa isogashii desu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 46,
-        kanji: "土曜日",
-        kana: "どようび",
-        romaji: "doyōbi",
-        meaning: "Sabtu",
-        example: "土曜日に買い物をします. (Doyōbi ni kaimono o shimasu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 47,
-        kanji: "日曜日",
-        kana: "にちようび",
-        romaji: "nichiyōbi",
-        meaning: "Minggu",
-        example: "日曜日に休みます. (Nichiyōbi ni yasumimasu.)",
-        topic: "Waktu"
-    },
-    {
-        id: 48,
+        id: 31,
         kanji: "今日",
         kana: "きょう",
         romaji: "kyō",
@@ -439,7 +293,7 @@ const vocabulary = [
         topic: "Waktu"
     },
     {
-        id: 49,
+        id: 32,
         kanji: "明日",
         kana: "あした",
         romaji: "ashita",
@@ -448,27 +302,69 @@ const vocabulary = [
         topic: "Waktu"
     },
     {
-        id: 50,
+        id: 33,
         kanji: "昨日",
         kana: "きのう",
         romaji: "kinō",
         meaning: "kemarin",
         example: "昨日は寒かったです. (Kinō wa samukatta desu.)",
         topic: "Waktu"
-    }
+    },
+    
+    // --- Tambahan: Angka & Penghitungan ---
+    { id: 34, kanji: "一", kana: "いち", romaji: "ichi", meaning: "satu", example: "リンゴを一つください. (Ringo o hitotsu kudasai.)", topic: "Angka" },
+    { id: 35, kanji: "二", kana: "に", romaji: "ni", meaning: "dua", example: "私は二匹の猫を飼っています. (Watashi wa nihiki no neko o katteimasu.)", topic: "Angka" },
+    { id: 36, kanji: "三", kana: "さん", romaji: "san", meaning: "tiga", example: "三階です. (Sangai desu.)", topic: "Angka" },
+    { id: 37, kanji: "四", kana: "よん", romaji: "yon", meaning: "empat", example: "四時です. (Yoji desu.)", topic: "Angka" },
+    { id: 38, kanji: "五", kana: "ご", romaji: "go", meaning: "lima", example: "五分待ってください. (Gofun matte kudasai.)", topic: "Angka" },
+    
+    // --- Tambahan: Makanan & Minuman ---
+    { id: 39, kanji: "ご飯", kana: "ごはん", romaji: "gohan", meaning: "nasi, makanan", example: "朝ごはんは食べましたか. (Asagohan wa tabemashita ka.)", topic: "Makanan & Minuman" },
+    { id: 40, kanji: "水", kana: "みず", romaji: "mizu", meaning: "air", example: "水をください. (Mizu o kudasai.)", topic: "Makanan & Minuman" },
+    { id: 41, kanji: "お茶", kana: "おちゃ", romaji: "ocha", meaning: "teh hijau", example: "お茶を飲みます. (Ocha o nomimasu.)", topic: "Makanan & Minuman" },
+    { id: 42, kanji: "肉", kana: "にく", romaji: "niku", meaning: "daging", example: "この肉は美味しいです. (Kono niku wa oishii desu.)", topic: "Makanan & Minuman" },
+    { id: 43, kanji: "魚", kana: "さかな", romaji: "sakana", meaning: "ikan", example: "魚が好きです. (Sakana ga suki desu.)", topic: "Makanan & Minuman" },
+    { id: 44, kanji: "パン", kana: "パン", romaji: "pan", meaning: "roti", example: "パンを食べました. (Pan o tabemashita.)", topic: "Makanan & Minuman" },
+    
+    // --- Tambahan: Keluarga ---
+    { id: 45, kanji: "家族", kana: "かぞく", romaji: "kazoku", meaning: "keluarga", example: "私の家族は五人です. (Watashi no kazoku wa gonin desu.)", topic: "Keluarga" },
+    { id: 46, kanji: "父", kana: "ちち", romaji: "chichi", meaning: "ayah", example: "私の父は医者です. (Watashi no chichi wa isha desu.)", topic: "Keluarga" },
+    { id: 47, kanji: "母", kana: "はは", romaji: "haha", meaning: "ibu", example: "母は料理が上手です. (Haha wa ryōri ga jōzu desu.)", topic: "Keluarga" },
+    { id: 48, kanji: "兄", kana: "あに", romaji: "ani", meaning: "kakak laki-laki (sendiri)", example: "兄が一人います. (Ani ga hitori imasu.)", topic: "Keluarga" },
+    { id: 49, kanji: "弟", kana: "おとうと", romaji: "otouto", meaning: "adik laki-laki", example: "弟は学生です. (Otouto wa gakusei desu.)", topic: "Keluarga" },
+    { id: 50, kanji: "姉", kana: "あね", romaji: "ane", meaning: "kakak perempuan (sendiri)", example: "私の姉は優しいです. (Watashi no ane wa yasashii desu.)", topic: "Keluarga" },
+    { id: 51, kanji: "妹", kana: "いもうと", romaji: "imouto", meaning: "adik perempuan", example: "妹はとてもかわいいです. (Imouto wa totemo kawaii desu.)", topic: "Keluarga" },
+    
+    // --- Tambahan: Tempat & Lokasi ---
+    { id: 52, kanji: "店", kana: "みせ", romaji: "mise", meaning: "toko", example: "あの店は人気があります. (Ano mise wa ninki ga arimasu.)", topic: "Tempat" },
+    { id: 53, kanji: "病院", kana: "びょういん", romaji: "byouin", meaning: "rumah sakit", example: "病院に行きます. (Byouin ni ikimasu.)", topic: "Tempat" },
+    { id: 54, kanji: "銀行", kana: "ぎんこう", romaji: "ginkou", meaning: "bank", example: "銀行はどこですか. (Ginkou wa doko desu ka.)", topic: "Tempat" },
+    { id: 55, kanji: "郵便局", kana: "ゆうびんきょく", romaji: "yuubinkyoku", meaning: "kantor pos", example: "郵便局は遠いです. (Yuubinkyoku wa tooi desu.)", topic: "Tempat" },
+    { id: 56, kanji: "公園", kana: "こうえん", romaji: "kouen", meaning: "taman", example: "公園で遊びます. (Kouen de asobimasu.)", topic: "Tempat" },
+    
+    // --- Tambahan: Kata Benda ---
+    { id: 57, kanji: "電話", kana: "でんわ", romaji: "denwa", meaning: "telepon", example: "電話をかけます. (Denwa o kakemasu.)", topic: "Benda" },
+    { id: 58, kanji: "鍵", kana: "かぎ", romaji: "kagi", meaning: "kunci", example: "鍵をなくしました. (Kagi o nakushimashita.)", topic: "Benda" },
+    { id: 59, kanji: "財布", kana: "さいふ", romaji: "saifu", meaning: "dompet", example: "財布を忘れました. (Saifu o wasuremashita.)", topic: "Benda" },
+    { id: 60, kanji: "傘", kana: "かさ", romaji: "kasa", meaning: "payung", example: "傘を持っていますか. (Kasa o motteimasu ka.)", topic: "Benda" },
+    { id: 61, kanji: "椅子", kana: "いす", romaji: "isu", meaning: "kursi", example: "この椅子に座ってください. (Kono isu ni suwatte kudasai.)", topic: "Benda" },
+    { id: 62, kanji: "机", kana: "つくえ", romaji: "tsukue", meaning: "meja", example: "机の上です. (Tsukue no ue desu.)", topic: "Benda" },
+    
+    // --- Tambahan: Hobi & Kegiatan ---
+    { id: 63, kanji: "音楽", kana: "おんがく", romaji: "ongaku", meaning: "musik", example: "音楽を聴くのが好きです. (Ongaku o kiku no ga suki desu.)", topic: "Hobi" },
+    { id: 64, kanji: "映画", kana: "えいが", romaji: "eiga", meaning: "film", example: "映画を見に行きましょう. (Eiga o mi ni ikimashou.)", topic: "Hobi" },
+    { id: 65, kanji: "旅行", kana: "りょこう", romaji: "ryokou", meaning: "perjalanan", example: "旅行が好きです. (Ryokou ga suki desu.)", topic: "Hobi" },
+    { id: 66, kanji: "スポーツ", kana: "スポーツ", romaji: "supōtsu", meaning: "olahraga", example: "スポーツをします. (Supōtsu o shimasu.)", topic: "Hobi" },
+    { id: 67, kanji: "料理", kana: "りょうり", romaji: "ryouri", meaning: "masakan", example: "料理を習いたいです. (Ryouri o naraitai desu.)", topic: "Hobi" },
 ];
 
-// Component untuk satu kartu kosakata
 const VocabularyCard = ({ item }) => {
-    
-    // Fungsi untuk memutar audio teks
     const handlePlayAudio = (text, lang = 'ja-JP') => {
         if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
             window.speechSynthesis.speak(utterance);
         } else {
-            // Kita tidak menggunakan alert() karena ini akan mengganggu pengalaman pengguna di dalam iframe
             console.error('Browser Anda tidak mendukung text-to-speech.');
         }
     };
@@ -489,13 +385,10 @@ const VocabularyCard = ({ item }) => {
     );
 };
 
-// Komponen utama aplikasi
-const App = () => {
-    // Mengambil topik unik dari data kosakata
+const Vocabulary = () => {
     const topics = [...new Set(vocabulary.map(v => v.topic))];
     const [selectedTopic, setSelectedTopic] = useState(topics[0]);
 
-    // Memfilter kosakata berdasarkan topik yang dipilih
     const filteredVocab = vocabulary.filter(v => v.topic === selectedTopic);
 
     return (
@@ -578,4 +471,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default Vocabulary;
