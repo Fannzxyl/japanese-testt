@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && git add docs && git commit -m \"build: pages\" || echo nochanges && git push"
   },
   "dependencies": {
     "firebase": "^12.2.1",
@@ -23,6 +24,6 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.0.2",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.3.6"
   }
 }
