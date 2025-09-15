@@ -1,26 +1,32 @@
+// --- START OF FILE Settings.tsx ---
+
 import React from 'react';
-import { useAppStore } from '../store/useAppStore';
-import { Settings as SettingsType } from '../types';
+import { useAppStore } from '../store/useAppStore'; // Pastikan path ini benar
+import { Settings as SettingsType } from '../types'; // Pastikan path ini benar dan tipe Settings sudah didefinisikan
 
 const Settings: React.FC = () => {
+    // Mengambil settings dan fungsi setSettings dari global store
     const { settings, setSettings, user } = useAppStore();
 
+    // Fungsi handler untuk mengubah setting tertentu
     const handleSettingChange = <K extends keyof SettingsType,>(key: K, value: SettingsType[K]) => {
-        setSettings({ [key]: value });
+        setSettings({ [key]: value }); // Memperbarui bagian settings di store
     };
     
+    // Fungsi untuk mereset progres (simulasi)
     const handleResetProgress = () => {
         if (window.confirm('Are you sure you want to reset all your progress? This action cannot be undone.')) {
-            // In a real app, this would trigger an API call or clear local storage.
+            // Dalam aplikasi nyata, ini akan memicu panggilan API atau membersihkan penyimpanan lokal.
             alert('Progress has been reset. (Simulation)');
         }
     };
 
+    // Fungsi untuk mengekspor data pengguna (simulasi)
     const handleExportData = () => {
         const dataToExport = {
             user,
             settings,
-            // In a real app, you'd include learning progress, SRS queue, etc.
+            // Dalam aplikasi nyata, Anda akan menyertakan progres belajar, antrian SRS, dll.
             progress: {
                 learnedKana: 150,
                 learnedVocab: 258,
@@ -35,7 +41,7 @@ const Settings: React.FC = () => {
         link.click();
     };
 
-
+    // Komponen pembantu untuk baris pengaturan
     const SettingRow: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6 border-b border-slate-200 dark:border-slate-700">
             <div className="mb-3 sm:mb-0">
@@ -46,6 +52,7 @@ const Settings: React.FC = () => {
         </div>
     );
 
+    // Komponen pembantu untuk toggle switch
     const Toggle: React.FC<{ checked: boolean; onChange: (checked: boolean) => void }> = ({ checked, onChange }) => (
         <button
             role="switch"
@@ -61,49 +68,69 @@ const Settings: React.FC = () => {
         </button>
     );
 
+    // Render komponen Settings
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <h2 className="text-3xl font-bold">Settings</h2>
             <div className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-xl shadow-md">
+                {/* Pengaturan Tema */}
                 <SettingRow title="Theme" description="Choose between light and dark comfort mode.">
                     <div className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-full">
-                        <button onClick={() => handleSettingChange('theme', 'light')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'light' ? 'bg-white shadow' : ''}`}>Light</button>
-                        <button onClick={() => handleSettingChange('theme', 'dark')} className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'dark' ? 'bg-slate-800 shadow text-white' : ''}`}>Dark</button>
+                        <button 
+                            onClick={() => handleSettingChange('theme', 'light')} 
+                            // Kelas ini untuk styling tombol itu sendiri, bukan tema global
+                            className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'light' ? 'bg-white shadow text-slate-800' : 'text-slate-700 dark:text-slate-300'}`}
+                        >
+                            Light
+                        </button>
+                        <button 
+                            onClick={() => handleSettingChange('theme', 'dark')} 
+                            // Kelas ini untuk styling tombol itu sendiri, bukan tema global
+                            className={`px-4 py-1.5 rounded-full text-sm font-semibold ${settings.theme === 'dark' ? 'bg-slate-800 shadow text-white' : 'text-slate-700 dark:text-slate-300'}`}
+                        >
+                            Dark
+                        </button>
                     </div>
                 </SettingRow>
 
+                {/* Pengaturan Bahasa UI */}
                 <SettingRow title="UI Language" description="Select the display language for the interface.">
                      <select 
                         value={settings.language} 
                         onChange={(e) => handleSettingChange('language', e.target.value as 'id' | 'en')}
-                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                     >
                         <option value="en">English</option>
                         <option value="id">Bahasa Indonesia</option>
                     </select>
                 </SettingRow>
 
+                {/* Pengaturan Audio Auto-play */}
                 <SettingRow title="Audio Auto-play" description="Automatically play audio for new flashcards.">
                     <Toggle checked={settings.audioAutoplay} onChange={(v) => handleSettingChange('audioAutoplay', v)} />
                 </SettingRow>
                 
+                {/* Pengaturan Riwayat Pencarian */}
                 <SettingRow title="Search History" description="Save your recent searches. Turned off by default for privacy.">
                     <Toggle checked={settings.searchHistoryEnabled} onChange={(v) => handleSettingChange('searchHistoryEnabled', v)} />
                 </SettingRow>
 
+                {/* Pengaturan Riwayat Chat AI */}
                 <SettingRow title="AI Chat History" description="Save your AI Sensei chats. Turned off by default for privacy.">
                     <Toggle checked={settings.aiChatHistoryEnabled} onChange={(v) => handleSettingChange('aiChatHistoryEnabled', v)} />
                 </SettingRow>
 
+                {/* Pengaturan Tampilkan Scrollbar */}
                  <SettingRow title="Show Scrollbars" description="Make scrollbars visible for accessibility.">
                     <Toggle checked={settings.showScrollbars} onChange={(v) => handleSettingChange('showScrollbars', v)} />
                 </SettingRow>
                 
+                {/* Zona Bahaya */}
                 <div className="pt-6">
                      <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
                      <div className="mt-4 flex flex-col sm:flex-row gap-4">
                         <button onClick={handleResetProgress} className="px-4 py-2 border border-red-500 text-red-500 font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-900/50">Reset Progress</button>
-                        <button onClick={handleExportData} className="px-4 py-2 border border-slate-300 dark:border-slate-600 font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">Export My Data</button>
+                        <button onClick={handleExportData} className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-white font-semibold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">Export My Data</button>
                      </div>
                 </div>
 

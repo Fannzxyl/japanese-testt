@@ -1,3 +1,5 @@
+// --- START OF FILE AiSenseiModal.tsx ---
+
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
 
@@ -5,24 +7,68 @@ import { X, Send, Bot, Trash2, LoaderCircle } from 'lucide-react';
 interface Message {
     role: 'user' | 'model'; // Peran bisa 'user' atau 'model'
     text: string;
+    // Timestamp tidak lagi diperlukan untuk localStorage, karena pengurutan akan dilakukan saat dimuat
+    // namun bisa dipertahankan jika ingin menampilkan waktu pesan di UI.
+    // timestamp?: any; 
 }
+
+// Kunci unik untuk menyimpan data di localStorage
+const LOCAL_STORAGE_KEY = 'aiSenseiChatHistory';
 
 const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei }) => {
     const [aiMessages, setAiMessages] = useState<Message[]>([]);
     const [isAiLoading, setAiLoading] = useState(false);
     const [inputText, setInputText] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
-    
-    // Mock settings object karena external store tidak tersedia
-    // Dalam aplikasi nyata, ini bisa datang dari Context API, Redux, atau state global lainnya
+
+    // Mock settings object (jika history selalu aktif, bisa dihapus)
     const settings = { aiChatHistoryEnabled: true }; 
 
-    const addAiMessage = (message: Message) => {
-        setAiMessages(prevMessages => [...prevMessages, message]);
+    // =========================================================================
+    // !!! PENTING: API KEY GEMINI ANDA !!!
+    // Ganti ini dengan API Key Gemini Anda yang sebenarnya. 
+    // JANGAN EXPOSE KEYS SENSITIF ANDA SECARA LANGSUNG DI KODE KLIEN PUBLIK UNTUK PRODUKSI.
+    // Gunakan variabel lingkungan (environment variables) atau proxy server untuk keamanan.
+    // =========================================================================
+    const GEMINI_API_KEY = "AIzaSyCZVyGLZrlJW-bQFSYfIgVgWhVWQ6icaeE"; // <--- GANTI DENGAN API KEY GEMINI ANDA
+    // =========================================================================
+
+    // Fungsi untuk menyimpan chat ke localStorage
+    const saveChatToLocalStorage = (messages: Message[]) => {
+        try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(messages));
+            console.log("Chat history saved to localStorage.");
+        } catch (error) {
+            console.error("Error saving chat to localStorage:", error);
+        }
     };
 
+    // Fungsi untuk memuat chat dari localStorage saat komponen mount
+    useEffect(() => {
+        if (settings.aiChatHistoryEnabled) {
+            try {
+                const storedChat = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (storedChat) {
+                    setAiMessages(JSON.parse(storedChat));
+                    console.log("Chat history loaded from localStorage.");
+                }
+            } catch (error) {
+                console.error("Error loading chat from localStorage:", error);
+                // Jika ada error (misal JSON tidak valid), inisialisasi dengan array kosong
+                setAiMessages([]);
+            }
+        }
+    }, [settings.aiChatHistoryEnabled]); // Akan dijalankan sekali saat komponen mount, dan jika settings berubah
+
+    // Clear chat dari localStorage dan state lokal
     const clearAiChat = () => {
-        setAiMessages([]);
+        setAiMessages([]); // Bersihkan UI secara instan
+        try {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            console.log("Chat history cleared from localStorage.");
+        } catch (error) {
+            console.error("Error clearing chat from localStorage:", error);
+        }
     };
 
     // Tutup modal dengan tombol escape
@@ -39,28 +85,29 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
     // Scroll otomatis ke bawah setiap ada pesan baru
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [aiMessages]);
+    }, [aiMessages]); // Dipicu setiap kali aiMessages berubah, termasuk saat dimuat atau disimpan
 
     const handleSendMessage = async (text: string) => {
         const query = text.trim();
         if (!query || isAiLoading) return;
 
         setInputText('');
-        // Tambahkan pesan user ke riwayat obrolan
+        // Tambahkan pesan user ke riwayat obrolan di state lokal
         const newUserMessage: Message = { role: 'user', text: query };
-        addAiMessage(newUserMessage);
+        const updatedMessagesAfterUser = [...aiMessages, newUserMessage];
+        setAiMessages(updatedMessagesAfterUser);
+        saveChatToLocalStorage(updatedMessagesAfterUser); // Simpan ke localStorage
+
         setAiLoading(true);
 
-        const apiKey = "AIzaSyCZVyGLZrlJW-bQFSYfIgVgWhVWQ6icaeE"; // API key yang telah diberikan
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
-        // --- Start of Sensei's personality and intelligence logic ---
-        // System Prompt untuk menentukan persona Sensei Bahasa Jepang
-        const systemPrompt = "Anda adalah 'Sensei' yang bijaksana, sabar, dan ramah, serta seorang ahli dalam mengajar Bahasa Jepang. Tugas Anda adalah membantu pengguna memahami Bahasa Jepang dari tingkat pemula hingga lanjutan, menjawab pertanyaan mereka, menjelaskan tata bahasa, kosa kata, budaya, dan memberikan bimbingan yang personal. Selalu gunakan bahasa yang mudah dimengerti, berikan contoh yang relevan, tips belajar yang efektif, dan dorongan positif. Jawab dengan nada yang hangat, penuh semangat, dan menyenangkan. Ingat, tujuan utama Anda adalah membuat belajar Bahasa Jepang menjadi pengalaman yang menyenangkan dan efektif bagi pengguna.";
+        // System Prompt (sudah dimodifikasi untuk menghindari markdown)
+        const systemPrompt = "Anda adalah 'Sensei' yang bijaksana, sabar, dan ramah, serta seorang ahli dalam mengajar Bahasa Jepang. Tugas Anda adalah membantu pengguna memahami Bahasa Jepang dari tingkat pemula hingga lanjutan, menjawab pertanyaan mereka, menjelaskan tata bahasa, kosa kata, budaya, dan memberikan bimbingan yang personal. Selalu gunakan bahasa yang mudah dimengerti, berikan contoh yang relevan, tips belajar yang efektif, dan dorongan positif. Jawab dengan nada yang hangat, penuh semangat, dan menyenangkan. Ingat, tujuan utama Anda adalah membuat belajar Bahasa Jepang menjadi pengalaman yang menyenangkan dan efektif bagi pengguna. PENTING: Selalu berikan jawaban dalam format teks biasa, tanpa menggunakan tanda bintang (*), tanda pagar (#), garis bawah (_), atau karakter pemformatan markdown lainnya. Hindari juga garis pemisah seperti tiga tanda hubung (---).";
 
         // Mengonversi riwayat pesan menjadi format yang diterima oleh Gemini API
-        // Termasuk pesan user yang baru saja ditambahkan (untuk konteks)
-        const chatHistoryForApi = [...aiMessages, newUserMessage].map(msg => ({
+        // Gunakan updatedMessagesAfterUser di sini agar pesan user yang baru masuk ikut terkirim
+        const chatHistoryForApi = [...updatedMessagesAfterUser].map(msg => ({ 
             role: msg.role,
             parts: [{ text: msg.text }]
         }));
@@ -69,7 +116,7 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
             systemInstruction: {
                 parts: [{ text: systemPrompt }]
             },
-            contents: chatHistoryForApi, // Mengirim seluruh riwayat percakapan untuk konteks
+            contents: chatHistoryForApi,
         };
 
         let responseText = "Maaf, Sensei masih belajar. Bisakah kamu ulangi pertanyaanmu atau coba pertanyaan lain?";
@@ -81,9 +128,6 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
             });
             const result = await response.json();
             
-            // Log full API response for debugging
-            console.log("Gemini API Response:", result);
-
             const candidate = result.candidates?.[0];
             if (candidate && candidate.content?.parts?.[0]?.text) {
                 responseText = candidate.content.parts[0].text;
@@ -91,17 +135,18 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
                 console.error("Gemini API error:", result.error);
                 responseText = `Wah, sepertinya ada sedikit masalah dari pusat Sensei. Pesan error: ${result.error.message}. Sensei sedang memperbaikinya. Coba lagi nanti ya!`;
             } else {
-                // Handle cases where no error but no text is returned
                 responseText = "Sensei sedang memikirkan jawabannya... Hmm, sepertinya butuh waktu. Bisakah kamu coba lagi?";
             }
         } catch (error) {
             console.error("Error calling Gemini API:", error);
             responseText = "Wah, sepertinya ada sedikit masalah jaringan atau koneksi ke pusat Sensei. Mohon coba lagi sebentar ya!";
         } finally {
-            addAiMessage({ role: 'model', text: responseText });
+            const newModelMessage: Message = { role: 'model', text: responseText };
+            const finalMessages = [...updatedMessagesAfterUser, newModelMessage];
+            setAiMessages(finalMessages);
+            saveChatToLocalStorage(finalMessages); // Simpan respons model ke localStorage
             setAiLoading(false);
         }
-        // --- End of Sensei's personality and intelligence logic ---
     };
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -109,6 +154,7 @@ const AiSenseiModal: React.FC<{ closeAiSensei: () => void }> = ({ closeAiSensei 
         handleSendMessage(inputText);
     };
 
+    // Dengan localStorage, tidak ada loading autentikasi awal, jadi bisa langsung render modal
     return (
         // 1) Backdrop: klik area gelap = tutup
         <div 
