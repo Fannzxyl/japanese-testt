@@ -2,16 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- (Opsional) tambahkan favicon sendiri di /public lalu aktifkan baris di bawah -->
-    <!-- <link rel="icon" type="image/svg+xml" href="favicon.svg" /> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JFT A2 Nihongo Lab</title>
 
-    <!-- Boleh untuk cepat; untuk production idealnya Tailwind CLI/PostCSS -->
+    <!-- Cepat buat dev; untuk production bisa pindah ke Tailwind CLI -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-      /* util untuk sembunyikan scrollbar */
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -19,6 +16,6 @@
   </head>
   <body class="bg-slate-50 dark:bg-slate-900">
     <div id="root"></div>
-    <!-- PENTING: arahkan ke entry point TS kamu -->
+    <!-- penting: arahkan ke entry file -->
   </body>
 </html>
